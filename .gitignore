@@ -1,0 +1,15 @@
+# Ignore Mac system files
+.DS_store
+
+# Ignore R project and R project files
+git_repo.Rproj
+.Rproj.user/
+.RData
+.Rhistory
+
+# Ignore files that are larger than 50 MB
+RL_modeling/output/posterior_predictive/
+RL_modeling/recoverability/sim_data/
+
+
+

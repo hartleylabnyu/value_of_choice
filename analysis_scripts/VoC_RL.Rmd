@@ -1,0 +1,331 @@
+---
+title: "VoC RL Modeling Results"
+date: 6/5/23
+output:
+    html_document:
+        df_print: 'paged'
+        toc: true
+        toc_float:
+            collapsed: false
+            smooth_scroll: true
+        number_sections: false
+        code_download: true
+        self_contained: true
+---
+
+```{r chunk settings, include = FALSE}
+# set chunk settings
+knitr::opts_chunk$set(echo = FALSE, 
+                      cache = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+
+knitr::opts_chunk$set(dpi=600)
+```
+
+# Load packages 
+```{r load parckages, include = F}
+# list all packages required for the analysis
+list.of.packages <- c("tidyverse", "latex2exp")
+
+# check if all packages are installed, if not, install them.
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+# load all packages 
+lapply(list.of.packages, library, character.only = TRUE)
+
+# add theme for plotting
+perri_theme <- function () {
+  theme(
+    panel.border = element_rect(fill = "transparent", color="gray75"),
+    panel.background  = element_blank(),
+    plot.background = element_blank(), 
+    legend.background = element_rect(fill="transparent", colour=NA),
+    legend.key = element_rect(fill="transparent", colour=NA),
+    line = element_blank(),
+    axis.ticks = element_line(color="gray75"),
+    text=element_text(family="Avenir"),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 15),
+    title = element_text(size = 15),
+    strip.background = element_blank(),
+    strip.text = element_text(size=12)
+  )
+}
+
+color1 = "#00b4d8"
+color2 = "#0077b6"
+color3 = "#03045e"
+```
+
+# Load data  
+```{r, load data}
+#need to add subject ID
+aics = read_csv("RL_modeling/output/aics_all.csv")
+bics = read_csv("RL_modeling/output/bics_all.csv")
+load("data/vocDataTidy.RData")
+```
+
+```{r pivot BIC and AIC data longer}
+aics1 <- pivot_longer(aics, 
+                cols = oneAlpha_oneBeta:twoAlpha_twoBeta_agencyBonus,
+                names_to = "model",
+                values_to = "AIC")
+
+bics1 <- pivot_longer(bics, 
+                cols = oneAlpha_oneBeta:twoAlpha_twoBeta_agencyBonus,
+                names_to = "model",
+                values_to = "BIC")
+```
+
+
+# BIC and AIC by age group 
+```{r plotAIC and BIC by age group}
+# Add ppt ID and other demographic information to AICs and BICs 
+demo = banditTask %>% distinct(subID, gender, age, zAge, ageGrp)
+aics_f <- full_join(demo, aics1, by = c("subID"))
+
+#join aic and bic
+model_results <- full_join(aics_f, bics1, by = c("subID", "model"))
+model_results$model <- factor(model_results$model, 
+                              levels = c("oneAlpha_oneBeta",
+                                         "oneAlpha_twoBeta",
+                                         "twoAlpha_oneBeta",
+                                         "twoAlpha_twoBeta",
+                                         "oneAlpha_oneBeta_agencyBonus",
+                                         "oneAlpha_twoBeta_agencyBonus",
+                                         "twoAlpha_oneBeta_agencyBonus",
+                                         "twoAlpha_twoBeta_agencyBonus"))
+model_results <- model_results %>%
+    mutate(agencyBonus = case_when(str_detect(model, "agency") ~ 1,
+                                  !str_detect(model, "agency") ~ 0))
+                                   
+
+
+#summarize
+model_summary_overall <- model_results %>%
+    group_by(model, agencyBonus) %>%
+    summarize(meanAIC = mean(AIC),
+              medAIC = median(AIC),
+              meanBIC = mean(BIC),
+              medBIC = median(BIC))
+
+AIC_plot <- ggplot(model_summary_overall, aes(x = model, y = meanAIC, fill = factor(agencyBonus)))+
+    geom_bar(stat = "identity", position = "dodge", color = "black") +
+    scale_fill_manual(values = c(color1, color2), name = "Agency Bonus") +
+    coord_cartesian(ylim = c(390, 590)) +
+    ylab("Mean AIC") +
+    xlab("Model") +
+        scale_x_discrete(labels = c(TeX('$one\\alpha\\_one\\beta'),
+                                TeX('$one\\alpha\\_two\\beta'),
+                                TeX('$two\\alpha\\_one\\beta'),
+                                TeX('$two\\alpha\\_two\\beta'),
+                                TeX('$one\\alpha\\_one\\beta'),
+                                TeX('$one\\alpha\\_two\\beta'),
+                                TeX('$two\\alpha\\_one\\beta'),
+                                TeX('$two\\alpha\\_two\\beta'))) +
+    perri_theme() +
+        theme(axis.text.x = element_text(angle = 75, hjust = 1))
+AIC_plot
+
+BIC_plot <- ggplot(model_summary_overall, aes(x = model, y = meanBIC, fill = factor(agencyBonus)))+
+    geom_bar(stat = "identity", position = "dodge", color = "black") +
+    scale_fill_manual(values = c(color1, color2), name = "Agency Bonus") +
+    coord_cartesian(ylim = c(430, 580)) +
+    ylab("Mean BIC") +
+    xlab("Model") +
+    scale_x_discrete(labels = c(TeX('$one\\alpha\\_one\\beta'),
+                                TeX('$one\\alpha\\_two\\beta'),
+                                TeX('$two\\alpha\\_one\\beta'),
+                                TeX('$two\\alpha\\_two\\beta'),
+                                TeX('$one\\alpha\\_one\\beta'),
+                                TeX('$one\\alpha\\_two\\beta'),
+                                TeX('$two\\alpha\\_one\\beta'),
+                                TeX('$two\\alpha\\_two\\beta'))) +
+    perri_theme() +
+    theme(axis.text.x = element_text(angle = 75, hjust = 1))
+BIC_plot
+```
+
+
+
+#  Examine age-related change in parameter estimates from models
+```{r parameter estimates}
+# load all parameters from each model
+model_params <- read_csv("RL_modeling/output/model_fits_real_data/twoAlpha_twoBeta_agencyBonus.csv",
+                         col_names = c("negLL",
+                                       "logPost",
+                                       "AIC",
+                                       "BIC",
+                                       "alphaChoice",
+                                       "alphaComp",
+                                       "betaAgency",
+                                       "betaMachine",
+                                       "agencyBonus"))
+
+#add sub ID and information
+subID <- model_results %>% select(subID) %>% unique()
+model_params <- bind_cols(subID, model_params)
+model_params <- full_join(demo, model_params, by = c("subID"))
+```
+
+# Run regressions between model parameters and age
+```{r param age regressions}
+
+# Alpha Comp
+summary(lm(alphaComp ~ age, data = model_params))
+# not significant
+
+# Alpha Choice
+summary(lm(alphaChoice ~ age, data = model_params))
+#not significant
+
+# Beta Agency
+summary(lm(betaAgency ~ age, data = model_params))
+#significant
+
+# Beta Bandit
+summary(lm(betaBandit ~ age, data = model_params))
+#not significant
+
+# Agency Bonus
+summary(lm(agencyBonus ~ age, data = model_params))
+#not significant
+
+```
+
+# Plot relations between model parameters and age
+```{r age parameter plot}
+
+params_long <- model_params %>%
+    pivot_longer(names_to = "param",
+                 values_to = "estimate",
+                 cols = c(alphaChoice:agencyBonus)) 
+
+params_long$param <- factor(params_long$param, labels = c("Agency~Bonus", 
+                                                           TeX("$\\alpha_{choice}$"), 
+                                                           TeX("$\\alpha_{comp}$"), 
+                                                           TeX("$\\beta_{agency}$"), 
+                                                           TeX("$\\beta_{machine}$")))
+
+params_plot <- ggplot(params_long, aes(x = age, y = estimate, color = param)) +
+    facet_wrap(~param, scale = "free", labeller = label_parsed) +
+    geom_point() +
+    geom_smooth(method = "lm", aes(fill = param)) +
+    ylab("Parameter Estimate") +
+    xlab("Age") +
+    perri_theme() +
+    theme(legend.position = "none")
+params_plot
+```
+
+# Parameter summary statistics
+```{r parameter summary stats}
+
+param_summary <- params_long %>%
+    group_by(param) %>%
+    summarize(meanEstimate = mean(estimate),
+            seEstimate = sd(estimate)/sqrt(n()),
+            minEstimate = min(estimate),
+            maxEsetimate = max(estimate))
+param_summary
+
+```
+
+# Questionnaire relations
+
+## DOC
+```{r doc}
+# load questionnaire data
+DOC <- read_csv("data/scored_surveys/DOC_scored.csv", col_names = TRUE) 
+
+# merge with VoC random effects
+DOC <- left_join(DOC, model_params)
+
+# relation between DOC and age
+lm(DOC ~ zAge, DOC) %>% summary()
+#marginal positive effect (p = .058)
+
+# relation between DOC and VoC
+lm(DOC ~ betaAgency * agencyBonus *zAge, DOC) %>% summary()
+# no effects
+
+```
+
+## LOC
+```{r loc}
+# load questionnaire data
+LOC <- read_csv("data/scored_surveys/LOC_scored.csv", col_names = TRUE) 
+
+# merge with VoC random effects
+LOC <- left_join(LOC, model_params)
+
+# relation between LOC and age
+lm(LOC ~ zAge, LOC) %>% summary()
+# no effect
+
+# relation between LOC and VoC
+lm(LOC ~ betaAgency * agencyBonus * zAge, LOC) %>% summary()
+# betaAgency
+# betaAgency x agencyBonus (marginal)
+```
+
+## LOC parameter plots
+```{r plot LOC effects}
+LOC <- LOC %>%
+    mutate(agencyBonusBin = ntile(agencyBonus, 5))
+
+LOC_plot <- ggplot(LOC, aes(x = betaAgency, y = LOC, color = factor(agencyBonusBin))) +
+    geom_point() + 
+    geom_smooth(method = "lm", aes(color = factor(agencyBonusBin), fill = factor(agencyBonusBin)))  +
+    perri_theme()
+LOC_plot
+
+```
+
+
+
+## BDI
+```{r bdi}
+# load questionnaire data
+BDI <- read_csv("data/scored_surveys/BDI_scored.csv", col_names = TRUE) 
+
+# merge with VoC random effects
+BDI <- left_join(BDI, model_params)
+
+# relation between BDI and age
+lm(zBDI ~ zAge, BDI) %>% summary()
+# no effect
+
+# relation between BDI and VoC 
+lm(zBDI ~ betaAgency * agencyBonus *zAge, BDI) %>% summary()
+# no effects
+
+```
+
+
+## STAI
+```{r stai}
+# load questionnaire data
+STAI <- read_csv("data/scored_surveys/STAI_scored.csv", col_names = TRUE) 
+
+# merge with VoC random effects
+STAI <- left_join(STAI, model_params)
+
+# relation between STAI_t and age
+lm(zSTAI_t ~ zAge, STAI) %>% summary()
+# no effect
+
+# relation between STAI_t and VoC
+lm(zSTAI_t  ~ betaAgency * agencyBonus *zAge, STAI) %>% summary()
+# no effect
+
+# relation between STAI_s and age
+lm(zSTAI_s ~ zAge, STAI) %>% summary()
+# no effects
+
+# relation between STAI_s and VoC
+lm(zSTAI_s  ~ betaAgency * agencyBonus *zAge, STAI) %>% summary()
+# no effects
+```
