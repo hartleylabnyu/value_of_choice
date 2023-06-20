@@ -5,7 +5,7 @@ Tasks, anonymized data, and analysis code for: *Sensitivity to the instrumental 
 We collected data from 92 participants on a [probabilistic reinforcement-learning task](https://github.com/katenuss/value_of_control/tree/main/task) across contexts in which the instrumental value of control varied. The task can be run via Psychtoolbox-3 in Matlab Version 2019. Compatability with other Matlab versions has not been tested.
 
 ## Data
-Cleaned data used for regression analyses and scored survey data can be found in the [data folder][probabilistic reinforcement-learning task](https://github.com/katenuss/value_of_control/tree/main/data).
+Cleaned data used for regression analyses and scored survey data can be found in the [data folder](https://github.com/katenuss/value_of_control/tree/main/data).
 Raw data used for the reinforcement-learning modeling (stored in mat files) can be found in the [RL_modeling/data folder](https://github.com/katenuss/value_of_control/tree/main/RL_modeling/data). 
 
 ## Analysis code
