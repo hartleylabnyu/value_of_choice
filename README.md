@@ -6,7 +6,7 @@ We collected data from 92 participants on a [probabilistic reinforcement-learnin
 
 ## Data
 Cleaned data used for regression analyses and scored survey data can be found in the [data folder][probabilistic reinforcement-learning task](https://github.com/katenuss/value_of_control/tree/main/data).
-Raw data used for the reinforcement-learning modeling (stored in mat files) can be found in the [RL_modeling/data folder](https://github.com/katenuss/value_of_control/tree/main/RL_modeling/data. 
+Raw data used for the reinforcement-learning modeling (stored in mat files) can be found in the [RL_modeling/data folder](https://github.com/katenuss/value_of_control/tree/main/RL_modeling/data). 
 
 ## Analysis code
 Processed data was analyzed in R using the R markdown analysis scripts found in the [analysis_scripts folder](https://github.com/katenuss/value_of_control/tree/main/analysis_scripts). 
