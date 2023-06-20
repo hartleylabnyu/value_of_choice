@@ -10,7 +10,7 @@ Raw data used for the reinforcement-learning modeling (stored in mat files) can 
 
 ## Analysis code
 Processed data was analyzed in R using the R markdown analysis scripts found in the [analysis_scripts folder](https://github.com/katenuss/value_of_control/tree/main/analysis_scripts). 
-Some of the files used for the posterior predictive checks are not included in this repository due to file size limits, but they can be re-generated using simulation scripts included in the RL_modeling folder. 
+Some of the files used for the posterior predictive checks are not included in this repository due to file size limits, but they can be re-generated using simulation scripts included in the [RL_modeling folder](https://github.com/katenuss/value_of_control/tree/main/RL_modeling/). 
 
 ## Computational modeling
 Computational models were fit via the fmincon function in the optimizaiton toolbox in Matlab 2020b. 
