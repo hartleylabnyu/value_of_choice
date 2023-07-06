@@ -1,5 +1,5 @@
 # Sensitivity to the instrumental value of control increases across development
-Tasks, anonymized data, and analysis code for: *Katzman, P.L., *Nussenbaum, K., Lu, H., & Hartley, C.A. [*Sensitivity to the instrumental value of control increases across development.*](https://psyarxiv.com/exps6)
+Tasks, anonymized data, and analysis code for: *Katzman, P.L., *Nussenbaum, K., Lu, H., & Hartley, C.A. (under review). [*Sensitivity to the instrumental value of control increases across development.*](https://psyarxiv.com/exps6)
 
 ## Task
 We collected data from 92 participants on a [probabilistic reinforcement-learning task](https://github.com/katenuss/value_of_control/tree/main/task) across contexts in which the instrumental value of control varied. The task can be run via Psychtoolbox-3 in Matlab Version 2019. Compatability with other Matlab versions has not been tested.
