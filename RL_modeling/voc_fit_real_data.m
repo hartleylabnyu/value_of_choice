@@ -1,35 +1,82 @@
 %%%%%% VoC Fit Models %%%%%
-% Fit RL models to real data
-% Kate Nussenbaum and Hanxiao Lu, March 2023
-% katenuss@gmail.com
+% Kate Nussenbaum
+% Last edited: 9/28/23
 
-%%
-% clear everything
+%clear everything
 clear;
 
 % load path to likelihood functions
 addpath('lik_funs/');
 
 % load data
-dataFolder = 'data/';
+dataFolder = ['data/'];
 subIDs = dir([dataFolder '/*.mat']);
 subIDs = {subIDs.name};
 
 %get number of subjects
 n_subjects = length(subIDs);
 
-%% DETERMINE MODELS TO FIT %%
+%% VARIABLES TO MODIFY %%
 % save filename
-filename = 'output/all_model_fits';
+filename = 'output/all_16_models_100iter';
 
-% Determine number of iterations
-niter = 10;
+% Determine number of iterations - set to 100
+niter = 100;
 
 % models to fit
-models = {'oneAlpha_oneBeta', 'oneAlpha_twoBeta', 'twoAlpha_oneBeta', 'twoAlpha_twoBeta', ...
-    'oneAlpha_oneBeta_agencyBonus', 'oneAlpha_twoBeta_agencyBonus', 'twoAlpha_oneBeta_agencyBonus', 'twoAlpha_twoBeta_agencyBonus'};
 
-%preallocate structure
+%%%%%%%%%%%%%%%%%%%
+% ONE BETA MODELS %
+%%%%%%%%%%%%%%%%%%%
+
+% oneAlpha_oneBeta
+% twoAlpha_oneBeta
+% twoAlphaValenced_oneBeta
+% twoAlphaConf_oneBeta
+% threeAlphaValenced_oneBeta
+% fourAlpha_oneBeta
+
+%%%%%%%%%%%%%%%%%%%
+% TWO BETA MODELS %
+%%%%%%%%%%%%%%%%%%%
+
+% oneAlpha_twoBeta
+% twoAlpha_twoBeta
+% twoAlphaValenced_twoBeta
+% twoAlphaConf_twoBeta
+% threeAlphaValenced_twoBeta
+% fourAlpha_twoBeta
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ONE BETA AGENCY BONUS MODELS %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% oneAlpha_oneBeta_agencyBonus
+% twoAlpha_oneBeta_agencyBonus
+% twoAlphaValenced_oneBeta_agencyBonus
+% twoAlphaConf_oneBeta_agencyBonus
+% threeAlphaValenced_oneBeta_agencyBonus
+% fourAlpha_oneBeta_agencyBonus
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TWO BETA AGENCY BONUS MODELS %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% oneAlpha_twoBeta_agencyBonus
+% twoAlpha_twoBeta_agencyBonus
+% twoAlphaValenced_twoBeta_agencyBonus
+% twoAlphaConf_twoBeta_agencyBonus
+% threeAlphaValenced_twoBeta_agencyBonus
+% fourAlpha_twoBeta_agencyBonus
+
+
+%specify list of models
+models = {'oneAlpha_oneBeta', 'oneAlpha_twoBeta', 'twoAlpha_oneBeta', 'twoAlpha_twoBeta', ...
+       'twoAlphaValenced_oneBeta', 'twoAlphaValenced_twoBeta', 'fourAlpha_oneBeta', 'fourAlpha_twoBeta', ...
+   'oneAlpha_oneBeta_agencyBonus', 'oneAlpha_twoBeta_agencyBonus', 'twoAlpha_oneBeta_agencyBonus', 'twoAlpha_twoBeta_agencyBonus', ...
+   'twoAlphaValenced_oneBeta_agencyBonus', 'twoAlphaValenced_twoBeta_agencyBonus', 'fourAlpha_oneBeta_agencyBonus', 'fourAlpha_twoBeta_agencyBonus' };
+
+%preallocate structure to save results
 model_fits(length(models)) = struct();
 
 %% FIT MODELS TO DATA %%
@@ -47,44 +94,126 @@ for m = 1:length(models)
     % Model-specific info %
     %%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    % Baseline models
-    if strcmp(model_to_fit, 'oneAlpha_oneBeta')
-        n_params = 2; %alpha, beta
-        lb = [1e-6, 1e-6];
-        ub = [1, 30];
-    elseif strcmp(model_to_fit, 'oneAlpha_twoBeta')
-        n_params = 3; %alpha, beta
-        lb = [1e-6, 1e-6, 1e-6];
-        ub = [1, 30, 30];
-    elseif strcmp(model_to_fit, 'twoAlpha_oneBeta')
-        n_params = 3; %alpha, beta
-        lb = [1e-6, 1e-6, 1e-6];
-        ub = [1, 1, 30];
-    elseif strcmp(model_to_fit, 'twoAlpha_twoBeta')
-        n_params = 4; %alpha, beta
-        lb = [1e-6, 1e-6, 1e-6, 1e-6];
-        ub = [1, 1, 30, 30];
-    elseif strcmp(model_to_fit, 'oneAlpha_oneBeta_agencyBonus')
-        n_params = 3; %alpha, beta
-        lb = [1e-6, 1e-6, -5];
-        ub = [1, 30, 5];
-    elseif strcmp(model_to_fit, 'oneAlpha_twoBeta_agencyBonus')
-        n_params = 4; %alpha, beta
-        lb = [1e-6, 1e-6, 1e-6, -5];
-        ub = [1, 30, 30, 5];
-    elseif strcmp(model_to_fit, 'twoAlpha_oneBeta_agencyBonus')
-        n_params = 4; %alpha, beta
-        lb = [1e-6, 1e-6,1e-6, -5];
-        ub = [1, 1, 30, 5];
-    elseif strcmp(model_to_fit, 'twoAlpha_twoBeta_agencyBonus')
-        n_params = 5; %alpha, beta
-        lb = [1e-6, 1e-6, 1e-6, 1e-6, -5];
-        ub = [1, 1, 30, 30, 5];
-    end
+        % ONE BETA
+        if strcmp(model_to_fit, 'oneAlpha_oneBeta')
+            n_params = 2;
+            lb = [1e-6, 1e-6];
+            ub = [1, 30];
+        elseif strcmp(model_to_fit, 'twoAlpha_oneBeta')
+            n_params = 3;
+            lb = [1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 30];
+        elseif strcmp(model_to_fit, 'twoAlphaValenced_oneBeta')
+            n_params = 3;
+            lb = [1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 30];
+        elseif strcmp(model_to_fit, 'twoAlphaConf_oneBeta')
+            n_params = 3;
+            lb = [1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 30];
+        elseif strcmp(model_to_fit, 'threeAlphaValenced_oneBeta')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 1, 30];
+        elseif strcmp(model_to_fit, 'fourAlpha_oneBeta')
+            n_params = 5;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 1, 1, 30];
+    
+        %TWO BETA
+        elseif strcmp(model_to_fit, 'oneAlpha_twoBeta')
+            n_params = 3;
+            lb = [1e-6, 1e-6, 1e-6];
+            ub = [1, 30, 30];
+        elseif strcmp(model_to_fit, 'twoAlpha_twoBeta')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 30, 30];
+        elseif strcmp(model_to_fit, 'twoAlphaValenced_twoBeta')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 30, 30];
+        elseif strcmp(model_to_fit, 'twoAlphaConf_twoBeta')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 30, 30];
+        elseif strcmp(model_to_fit, 'threeAlphaValenced_twoBeta')
+            n_params = 5;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 1, 30, 30];
+        elseif strcmp(model_to_fit, 'fourAlpha_twoBeta')
+            n_params = 6;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 1, 1, 30, 30];
+    
+        % ONE BETA AGENCY BONUS
+        elseif strcmp(model_to_fit, 'oneAlpha_oneBeta_agencyBonus')
+            n_params = 3;
+            lb = [1e-6, 1e-6, -5];
+            ub = [1, 30, 5];
+        elseif strcmp(model_to_fit, 'twoAlpha_oneBeta_agencyBonus')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 30, 5];
+        elseif strcmp(model_to_fit, 'twoAlphaValenced_oneBeta_agencyBonus')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 30, 5];
+        elseif strcmp(model_to_fit, 'twoAlphaConf_oneBeta_agencyBonus')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 30, 5];
+        elseif strcmp(model_to_fit, 'threeAlphaValenced_oneBeta_agencyBonus')
+            n_params = 5;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 1, 30, 5];
+        elseif strcmp(model_to_fit, 'fourAlpha_oneBeta_agencyBonus')
+            n_params = 6;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 1, 1, 30, 5];
+    
+        %TWO BETA AGENCY BONUS
+        elseif strcmp(model_to_fit, 'oneAlpha_twoBeta_agencyBonus')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 30, 30, 5];
+        elseif strcmp(model_to_fit, 'twoAlpha_twoBeta_agencyBonus')
+            n_params = 5;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 30, 30, 5];
+        elseif strcmp(model_to_fit, 'twoAlphaValenced_twoBeta_agencyBonus')
+            n_params = 5;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 30, 30, 5];
+        elseif strcmp(model_to_fit, 'twoAlphaConf_twoBeta_agencyBonus')
+            n_params = 5;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 30, 30, 5];
+        elseif strcmp(model_to_fit, 'threeAlphaValenced_twoBeta_agencyBonus')
+            n_params = 6;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 1, 30, 30, 5];
+        elseif strcmp(model_to_fit, 'fourAlpha_twoBeta_agencyBonus')
+            n_params = 7;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 1, 1, 30, 30, 5];
+        elseif strcmp(model_to_fit, 'fourAlpha_twoBeta_agencyBonusOutside')
+            n_params = 7;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6, 1e-6, -100];
+            ub = [1, 1, 1, 1, 30, 30, 100];
+        elseif strcmp(model_to_fit, 'fourAlpha_twoBeta_agencyBonus_offer')
+            n_params = 8;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6, 1e-6, -5, 1e-6];
+            ub = [1, 1, 1, 1, 30, 30, 5, 10];
+        elseif strcmp(model_to_fit, 'oneAlpha_oneBeta_qInit')
+            n_params = 3;
+            lb = [1e-6, 1e-6, -10];
+            ub = [1, 30, 10];
+        end
     
     
     % convert function name to function
-    model_filename = ['output/model_fits/fit_', model_to_fit];
+    model_filename = ['output/model_fits_real_data/fit_', model_to_fit];
     fh = str2func(model_to_fit);
     
     % generate matrices to save data
@@ -92,7 +221,7 @@ for m = 1:length(models)
     [params] = nan(n_subjects, n_params);
     
     %determine csv filename for model results
-    csv_filename = ['output/model_fits/', model_to_fit, '.csv'];
+    csv_filename = ['output/model_fits_real_data/', model_to_fit, '.csv'];
     
     %loop through subjects
     parfor s = 1:n_subjects
@@ -105,7 +234,7 @@ for m = 1:length(models)
         subject = subID(1:end-4);
         
         %determine filename for latents
-        latents_filename{s} = ['output/model_fits/latents/latents_', model_to_fit, '_', subject, '.csv'];
+        latents_filename{s} = ['output/model_fits_real_data/latents/latents_', model_to_fit, '_', subject, '.csv'];
         
         % load subject data file
         sub_data = load(strcat(dataFolder, filesep, subIDs{s}));
@@ -128,7 +257,7 @@ for m = 1:length(models)
             % choose a random number between the lower and upper bounds to initialize each of the parameters
             starting_points = rand(1,length(lb)).* (ub - lb) + lb; % random initialization
             
-            % Run fmincon 
+            % Run fmincon
             [res, nlp] = ...
                 fmincon(@(x) fh(QbanditOrder, agencyChoiceVec, banditChoiceVec, outcome, agency, offer, leftBandit, rightBandit, x, 1),...
                 starting_points,[],[],[],[],lb, ub,[],...
@@ -144,10 +273,10 @@ for m = 1:length(models)
                 [negloglik(s), latents(s)] = fh(QbanditOrder, agencyChoiceVec, banditChoiceVec, outcome, agency, offer, leftBandit, rightBandit, res, 0); %fit model w/ 'winning' parameters w/o priors to get the negative log likelihood
                 AIC(s) = 2*negloglik(s) + 2*length(res);
                 num_bandit_choices = length(find(agencyChoiceVec == 2));
-                BIC(s) = 2*negloglik(s) + length(res)*log(length(agencyChoiceVec) + num_bandit_choices); 
+                BIC(s) = 2*negloglik(s) + length(res)*log(length(agencyChoiceVec) + num_bandit_choices); %add number of bandit choices participant actually made - from banditChoiceVec
                 age_group{s} = subject(end);
                 sub{s} = subject;
-
+                
                 %write latents CSV for each participant
                 dlmwrite(latents_filename{s}, [latents(s).banditQs(:,1), latents(s).banditQs(:,2), latents(s).estEVChoice', latents(s).estEVComp', latents(s).RPE']);
             end
@@ -162,13 +291,12 @@ for m = 1:length(models)
     results.AIC = AIC;
     results.BIC = BIC;
     
-    %write csv of results for each model
+    %write csv for each model
     dlmwrite(csv_filename, [results.negloglik, results.logpost, results.AIC, results.BIC, results.params]);
     
     %save structure for each model
     model_fits(m).results = results;
     model_fits(m).fit_model = model_to_fit;
-    
     model_fit = model_fits(m);
     
     %Save fitting results

@@ -1,7 +1,6 @@
-%% Simulate VoC choices - real parameters %%
+%% Simulate choices %%
 % Simulate data based on subjects' best-fitting parameters
-% Kate Nussenbaum - katenuss@gmail.com
-% 6/9/23
+% KN - 6/9/23
 
 clear all;
 clc;
@@ -24,12 +23,13 @@ num_subs = length(subIDs);
 num_reps = 50;
 
 % determine how to save the simulated data
-save_filename = 'sim_data/sim_data_realParams';
+save_filename = 'sim_data/sim_data_realParams_16models';
 
 %determine models to simulate
 models = {'oneAlpha_oneBeta', 'oneAlpha_twoBeta', 'twoAlpha_oneBeta', 'twoAlpha_twoBeta', ...
-    'oneAlpha_oneBeta_agencyBonus', 'oneAlpha_twoBeta_agencyBonus', 'twoAlpha_oneBeta_agencyBonus', 'twoAlpha_twoBeta_agencyBonus'};
-
+        'twoAlphaValenced_oneBeta', 'twoAlphaValenced_twoBeta', 'fourAlpha_oneBeta', 'fourAlpha_twoBeta', ...
+    'oneAlpha_oneBeta_agencyBonus', 'oneAlpha_twoBeta_agencyBonus', 'twoAlpha_oneBeta_agencyBonus', 'twoAlpha_twoBeta_agencyBonus', ...
+    'twoAlphaValenced_oneBeta_agencyBonus', 'twoAlphaValenced_twoBeta_agencyBonus', 'fourAlpha_oneBeta_agencyBonus', 'fourAlpha_twoBeta_agencyBonus' };
 
 %% initialize structure to store simulation results
 sim_data(length(models)) = struct();
@@ -41,7 +41,7 @@ task_struct.QbanditOrder = { 'bandit50a', 'bandit50b'; ...
     'bandit90', 'bandit10'};
 
 %% Load model fits
-model_fits = load(['../output/all_model_fits']);
+model_fits = load(['../output/all_16_models']);
 
 %% Loop through models
 for m = 1:length(models)
@@ -97,6 +97,7 @@ for m = 1:length(models)
     sim_data(m).sub_data = model_data;
     sim_data(m).function = function_name;
     sim_data(m).n_params = size(sub_params, 2);
+    %sim_data(m).param_names = param_names;
     
 end
 

@@ -1,12 +1,12 @@
-% Fit RL models to simulated data
-% Kate Nussenbaum and Hanxiao Lu
-% June 2023
+% Fit RL models
+% HL - April 2023
 
-function [model_fits] = fit_simulated_data_spaced(sim_num)
+function [model_fits] = fit_simulated_data(sim_num)
 
 % Clear everything that's loaded
 
 %add randomization
+%RandStream.setGlobalStream(RandStream('mt19937ar','Seed', 'shuffle'));
 RandStream.setGlobalStream(RandStream('mlfg6331_64','Seed', sim_num));
 
 %add likelihood functions
@@ -23,7 +23,10 @@ n_subjects = 1;
 
 % models to fit
 models = {'oneAlpha_oneBeta', 'oneAlpha_twoBeta', 'twoAlpha_oneBeta', 'twoAlpha_twoBeta', ...
-    'oneAlpha_oneBeta_agencyBonus', 'oneAlpha_twoBeta_agencyBonus', 'twoAlpha_oneBeta_agencyBonus', 'twoAlpha_twoBeta_agencyBonus'};
+'twoAlphaValenced_oneBeta', 'twoAlphaValenced_twoBeta', 'fourAlpha_oneBeta', 'fourAlpha_twoBeta', ...
+    'oneAlpha_oneBeta_agencyBonus', 'oneAlpha_twoBeta_agencyBonus', 'twoAlpha_oneBeta_agencyBonus', 'twoAlpha_twoBeta_agencyBonus', ...
+    'twoAlphaValenced_oneBeta_agencyBonus', 'twoAlphaValenced_twoBeta_agencyBonus', 'fourAlpha_oneBeta_agencyBonus', 'fourAlpha_twoBeta_agencyBonus' };
+
 
 %preallocate structure
 model_fits(length(models)) = struct();
@@ -66,6 +69,22 @@ for d = 1:num_sim_datasets %loop through simulated datasets
             n_params = 4; %alpha, beta
             lb = [1e-6, 1e-6, 1e-6, 1e-6];
             ub = [1, 1, 30, 30];
+        elseif strcmp(model_to_fit, 'twoAlphaValenced_oneBeta')
+            n_params = 3;
+            lb = [1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 30];
+        elseif strcmp(model_to_fit, 'twoAlphaValenced_twoBeta')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 30, 30];
+        elseif strcmp(model_to_fit, 'fourAlpha_oneBeta')
+            n_params = 5;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 1, 1 30];
+        elseif strcmp(model_to_fit, 'fourAlpha_twoBeta')
+            n_params = 6;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 1, 1, 30, 30];
         elseif strcmp(model_to_fit, 'oneAlpha_oneBeta_agencyBonus')
             n_params = 3; %alpha, beta
             lb = [1e-6, 1e-6, -5];
@@ -82,8 +101,24 @@ for d = 1:num_sim_datasets %loop through simulated datasets
             n_params = 5; %alpha, beta
             lb = [1e-6, 1e-6, 1e-6, 1e-6, -5];
             ub = [1, 1, 30, 30, 5];
+        elseif strcmp(model_to_fit, 'twoAlphaValenced_oneBeta_agencyBonus')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 30, 5];
+        elseif strcmp(model_to_fit, 'twoAlphaValenced_twoBeta_agencyBonus')
+            n_params = 5;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 30, 30, 5];
+        elseif strcmp(model_to_fit, 'fourAlpha_oneBeta_agencyBonus')
+            n_params = 6;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 1, 1, 30, 5];
+        elseif strcmp(model_to_fit, 'fourAlpha_twoBeta_agencyBonus')
+            n_params = 7;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 1, 1, 30, 30, 5];
         end
-    
+        
         % determine function
         function_name = model_to_fit;
         fh = str2func(function_name);
@@ -93,8 +128,8 @@ for d = 1:num_sim_datasets %loop through simulated datasets
         [params] = nan(n_subjects, n_params);
         
         %determine csv filename for model results
-       % csv_filename = ['output/simulations/', 'sim_', model_to_fit, '.csv'];
-
+        % csv_filename = ['output/simulations/', 'sim_', model_to_fit, '.csv'];
+        
         %initialize results structure
         results(1) = struct();
         results.logpost = logpost;
@@ -104,57 +139,57 @@ for d = 1:num_sim_datasets %loop through simulated datasets
         results.BIC = BIC;
         
         %loop through subjects
-            s = 1;
-            sub_data = sim_model_data(s);
+        s = 1;
+        sub_data = sim_model_data(s);
+        
+        fprintf('Fitting subject %d out of %d...\n', s, n_subjects) %print message saying which subject is being fit
+        
+        %determine filename for latents
+        %latents_filename{s} = ['output/simulations/latents/latents_', 'sim_',model_to_fit, '_', subject, '.csv'];
+        
+        % get trial information and simulated choices
+        outcome = [sub_data.outcome];
+        agency = [sub_data.agencyChoiceVec - 1];
+        agencyChoiceVec = [sub_data.agencyChoiceVec];
+        banditChoiceVec = [sub_data.banditChoiceVec];
+        leftBandit = [sub_data.leftBandit];
+        rightBandit = [sub_data.rightBandit]';
+        offer = [sub_data.offer]';
+        
+        QbanditOrder = { 'bandit50a', 'bandit50b'; ...
+            'bandit70', 'bandit30'; ...
+            'bandit90', 'bandit10'};
+        
+        for iter = 1:niter  % run niter times from random initial conditions, to get best fit
             
-            fprintf('Fitting subject %d out of %d...\n', s, n_subjects) %print message saying which subject is being fit
-         
-            %determine filename for latents
-            %latents_filename{s} = ['output/simulations/latents/latents_', 'sim_',model_to_fit, '_', subject, '.csv'];
+            % choose a random number between the lower and upper bounds to initialize each of the parameters
+            starting_points = rand(1,length(lb)).* (ub - lb) + lb; % random initialization
             
-            % get trial information and simulated choices 
-            outcome = [sub_data.outcome];
-            agency = [sub_data.agencyChoiceVec - 1];
-            agencyChoiceVec = [sub_data.agencyChoiceVec];
-            banditChoiceVec = [sub_data.banditChoiceVec];
-            leftBandit = [sub_data.leftBandit];
-            rightBandit = [sub_data.rightBandit]';
-            offer = [sub_data.offer]';
+            % Run fmincon
+            [res, nlp] = ...
+                fmincon(@(x) fh(QbanditOrder, agencyChoiceVec, banditChoiceVec, outcome, agency, offer, leftBandit, rightBandit, x, 1),...
+                starting_points,[],[],[],[],lb, ub,[],...
+                optimset('maxfunevals',10000,'maxiter',2000, 'Display', 'off'));
             
-            QbanditOrder = { 'bandit50a', 'bandit50b'; ...
-                'bandit70', 'bandit30'; ...
-                'bandit90', 'bandit10'};
+            %flip sign to get log posterior (if priors are in models, if no priors, this will be the log likelihood)
+            logp = -1 * nlp;
             
-            for iter = 1:niter  % run niter times from random initial conditions, to get best fit
+            %store results if minimum is found
+            if iter == 1 || logpost(s) < logp
+                logpost(s) = logp;
+                params(s, :) = res;
+                [negloglik(s), latents(s)] = fh(QbanditOrder, agencyChoiceVec, banditChoiceVec, outcome, agency, offer, leftBandit, rightBandit, res, 0); %fit model w/ 'winning' parameters w/o priors to get the negative log likelihood
+                AIC(s) = 2*negloglik(s) + 2*length(res);
+                num_bandit_choices = length(find(agencyChoiceVec == 2));
+                BIC(s) = 2*negloglik(s) + length(res)*log(length(agencyChoiceVec) + num_bandit_choices);
+                %age_group{s} = subject(end);
+                sub{s} = s;
                 
-                % choose a random number between the lower and upper bounds to initialize each of the parameters
-                starting_points = rand(1,length(lb)).* (ub - lb) + lb; % random initialization
-                
-                % Run fmincon 
-                [res, nlp] = ...
-                    fmincon(@(x) fh(QbanditOrder, agencyChoiceVec, banditChoiceVec, outcome, agency, offer, leftBandit, rightBandit, x, 1),...
-                    starting_points,[],[],[],[],lb, ub,[],...
-                    optimset('maxfunevals',10000,'maxiter',2000, 'Display', 'off'));
-                
-                %flip sign to get log posterior (if priors are in models, if no priors, this will be the log likelihood)
-                logp = -1 * nlp;
-                
-                %store results if minimum is found
-                if iter == 1 || logpost(s) < logp
-                    logpost(s) = logp;
-                    params(s, :) = res;
-                    [negloglik(s), latents(s)] = fh(QbanditOrder, agencyChoiceVec, banditChoiceVec, outcome, agency, offer, leftBandit, rightBandit, res, 0); %fit model w/ 'winning' parameters w/o priors to get the negative log likelihood
-                    AIC(s) = 2*negloglik(s) + 2*length(res);
-                    num_bandit_choices = length(find(agencyChoiceVec == 2));
-                    BIC(s) = 2*negloglik(s) + length(res)*log(length(agencyChoiceVec) + num_bandit_choices); 
-                    %age_group{s} = subject(end);
-                    sub{s} = s;
-
-                end
-                
+                %write latents CSV for each participant
+                %dlmwrite(latents_filename{s}, [latents(s).banditQs(:,1), latents(s).banditQs(:,2), latents(s).estEVChoice', latents(s).estEVComp', latents(s).RPE']);
             end
             
-            
+        end
 
         results.sub = sub;
         results.logpost = logpost;
@@ -162,7 +197,10 @@ for d = 1:num_sim_datasets %loop through simulated datasets
         results.negloglik = negloglik;
         results.AIC = AIC;
         results.BIC = BIC;
-
+        
+        %write csv for each model
+        %dlmwrite(csv_filename, [results.negloglik, results.logpost, results.AIC, results.BIC, results.params]);
+        
         %save for each model
         model_fits(d, m).results = results;
         model_fits(d, m).fit_model = model_to_fit;

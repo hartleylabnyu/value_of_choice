@@ -1,9 +1,0 @@
-oneAlpha_oneBeta,oneAlpha_twoBeta,twoAlpha_oneBeta,twoAlpha_twoBeta,oneAlpha_oneBeta_agencyBonus,oneAlpha_twoBeta_agencyBonus,twoAlpha_oneBeta_agencyBonus,twoAlpha_twoBeta_agencyBonus,RecoveredModel
-0.953,0.132,0.194,0.004,0.118,0.013,0.117,0.002,oneAlpha_oneBeta
-0.017,0.832,0.002,0.058,0.002,0.168,0.002,0.013,oneAlpha_twoBeta
-0.012,0.003,0.779,0.106,0.001,0,0.026,0.002,twoAlpha_oneBeta
-0.001,0.018,0.011,0.821,0,0.002,0.001,0.156,twoAlpha_twoBeta
-0.017,0.003,0.003,0,0.858,0.166,0.259,0.062,oneAlpha_oneBeta_agencyBonus
-0,0.012,0,0.001,0.012,0.64,0.003,0.147,oneAlpha_twoBeta_agencyBonus
-0,0,0.011,0.001,0.009,0.006,0.585,0.107,twoAlpha_oneBeta_agencyBonus
-0,0,0,0.009,0,0.005,0.007,0.511,twoAlpha_twoBeta_agencyBonus

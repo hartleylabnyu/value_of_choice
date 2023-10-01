@@ -1,18 +1,18 @@
 %% Compare models: VoC %%
-% March 2023
-% Kate Nussenbaum
-% % katenuss@gmail.com
+% Kate Nussenbaum - katenuss@nyu.edu
 
-%%
 %clear
 clear
 
+%determine name of comparison set
+data_name = 'all_16_models_100iter';
+
 % determine names for data saving
-aic_filename = 'output/aics_all.csv';
-bic_filename = 'output/bics_all.csv';
+aic_filename = ['output/aics_', data_name, '.csv'];
+bic_filename = ['output/bics_', data_name, '.csv'];
 
 % Load model fits
-load('output/all_model_fits');
+load(['output/', data_name]);
 
 %Determine number of models
 num_models = length(model_fits);
@@ -76,37 +76,79 @@ end
 %----------------------------------------------%
 
 figure;
-subplot(2,2,1)
+subplot(1,2,1)
 b = bar(mean_aic, 'EdgeColor','black', 'LineWidth', 1);
 set(gca, 'xticklabel', model_name);
-set(gca,'FontName','Helvetica','FontSize',16);
-xlabel('Model','FontSize',18);
+set(gca,'FontName','Helvetica','FontSize',10);
+xlabel('Model','FontSize', 18);
 ylabel('Mean AIC', 'FontSize', 18);
 ylim([min(mean_aic) - 5, max(mean_aic) + 5]);
+xtickangle(45);
 
 
-subplot(2,2,2)
-b = bar(med_aic, 'EdgeColor','black', 'LineWidth', 1);
-set(gca, 'xticklabel', model_name);
-set(gca,'FontName','Helvetica','FontSize',16);
-xlabel('Model','FontSize',18);
-ylabel('Median AIC', 'FontSize', 18);
-ylim([min(med_aic) - 5, max(med_aic) + 5]);
+% subplot(2,2,2)
+% b = bar(med_aic, 'EdgeColor','black', 'LineWidth', 1);
+% set(gca, 'xticklabel', model_name);
+% set(gca,'FontName','Helvetica','FontSize', 10);
+% xlabel('Model','FontSize',18);
+% ylabel('Median AIC', 'FontSize', 18);
+% ylim([min(med_aic) - 5, max(med_aic) + 5]);
+% xtickangle(45);
 
-subplot(2,2,3)
+subplot(1,2,2)
 b = bar(mean_bic, 'EdgeColor','black', 'LineWidth', 1);
 set(gca, 'xticklabel',model_name);
-set(gca,'FontName','Helvetica','FontSize',16);
+set(gca,'FontName','Helvetica','FontSize', 10);
 xlabel('Model','FontSize',18);
 ylabel('Mean BIC', 'FontSize', 18);
 ylim([min(mean_bic) - 5, max(mean_bic) + 5]);
+xtickangle(45);
 
 
-subplot(2,2,4)
-b = bar(med_bic, 'EdgeColor','black', 'LineWidth', 1);
-set(gca, 'xticklabel',model_name);
-set(gca,'FontName','Helvetica','FontSize',16);
+% subplot(2,2,4)
+% b = bar(med_bic, 'EdgeColor','black', 'LineWidth', 1);
+% set(gca, 'xticklabel',model_name);
+% set(gca,'FontName','Helvetica','FontSize', 10);
+% xlabel('Model','FontSize',18);
+% ylabel('Median BIC', 'FontSize', 18);
+% ylim([min(med_bic) - 5, max(med_bic) + 5]);
+% xtickangle(45);
+
+
+%----------------------------------------------------%
+% STEP 3: % Compute difference from best AIC and BIC %
+%----------------------------------------------------%
+
+for model = 1:length(mean_aic)
+    aic_difference(model) = mean_aic(model) - min(mean_aic);
+    bic_difference(model) = mean_bic(model) - min(mean_bic);
+end
+
+figure;
+subplot(1,2,1)
+b = bar(aic_difference(1:end), 'EdgeColor','black', 'LineWidth', 1);
+set(gca, 'xticklabel', model_name(1:end));
+set(gca,'FontName','Helvetica','FontSize',10);
+xlabel('Model','FontSize', 18);
+ylabel('AIC difference from best model', 'FontSize', 18);
+xtickangle(45);
+
+subplot(1,2,2)
+b = bar(bic_difference(1:end), 'EdgeColor','black', 'LineWidth', 1);
+set(gca, 'xticklabel',model_name(1:end));
+set(gca,'FontName','Helvetica','FontSize', 10);
 xlabel('Model','FontSize',18);
-ylabel('Median BIC', 'FontSize', 18);
-ylim([min(med_bic) - 5, max(med_bic) + 5]);
+ylabel('BIC difference from best model', 'FontSize', 18);
+xtickangle(45);
+
+
+
+
+
+
+
+
+
+
+
 

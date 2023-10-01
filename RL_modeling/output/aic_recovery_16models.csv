@@ -1,0 +1,17 @@
+oneAlpha_oneBeta,oneAlpha_twoBeta,twoAlpha_oneBeta,twoAlpha_twoBeta,twoAlphaValenced_oneBeta,twoAlphaValenced_twoBeta,fourAlpha_oneBeta,fourAlpha_twoBeta,oneAlpha_oneBeta_agencyBonus,oneAlpha_twoBeta_agencyBonus,twoAlpha_oneBeta_agencyBonus,twoAlpha_twoBeta_agencyBonus,twoAlphaValenced_oneBeta_agencyBonus,twoAlphaValenced_twoBeta_agencyBonus,fourAlpha_oneBeta_agencyBonus,fourAlpha_twoBeta_agencyBonus,RecoveredModel
+0.504,0.04,0.015,0,0.053,0,0.027,0,0.01,0,0.003,0,0.018,0,0.005,0,oneAlpha_oneBeta
+0.074,0.536,0.002,0.003,0.016,0.034,0.006,0.002,0.005,0.011,0,0,0.001,0.005,0,0.002,oneAlpha_twoBeta
+0.099,0.006,0.618,0.033,0.013,0,0.016,0,0.004,0,0.008,0,0.001,0.001,0.002,0,twoAlpha_oneBeta
+0.02,0.109,0.11,0.699,0.003,0.019,0.005,0.009,0.001,0.002,0.001,0.012,0.001,0.003,0,0.001,twoAlpha_twoBeta
+0.074,0.011,0.005,0,0.557,0.07,0.008,0,0.005,0,0.003,0.001,0.012,0,0.005,0,twoAlphaValenced_oneBeta
+0.022,0.094,0.004,0.002,0.087,0.616,0.002,0.002,0.003,0.007,0,0.001,0.007,0.028,0.003,0,twoAlphaValenced_twoBeta
+0.026,0.004,0.071,0.003,0.067,0.007,0.673,0.054,0.003,0,0.001,0,0.003,0.001,0.008,0.001,fourAlpha_oneBeta
+0.01,0.042,0.013,0.093,0.019,0.091,0.101,0.782,0.001,0.002,0.003,0.002,0.002,0.005,0.004,0.026,fourAlpha_twoBeta
+0.094,0.009,0.004,0,0.022,0.001,0.015,0,0.586,0.098,0.092,0.018,0.121,0.043,0.064,0.02,oneAlpha_oneBeta_agencyBonus
+0.019,0.09,0,0.001,0.007,0.017,0.001,0.001,0.093,0.605,0.013,0.064,0.028,0.083,0.009,0.032,oneAlpha_twoBeta_agencyBonus
+0.018,0.001,0.101,0.01,0.007,0.002,0.005,0,0.1,0.01,0.647,0.083,0.028,0.012,0.038,0.006,twoAlpha_oneBeta_agencyBonus
+0.004,0.023,0.019,0.12,0.002,0.004,0,0.005,0.023,0.112,0.111,0.697,0.005,0.034,0.012,0.019,twoAlpha_twoBeta_agencyBonus
+0.019,0.003,0.004,0,0.103,0.01,0.004,0,0.102,0.017,0.031,0.003,0.604,0.118,0.069,0.02,twoAlphaValenced_oneBeta_agencyBonus
+0.006,0.02,0,0.002,0.019,0.106,0.001,0,0.019,0.089,0.007,0.016,0.087,0.578,0.011,0.053,twoAlphaValenced_twoBeta_agencyBonus
+0.008,0.001,0.029,0.002,0.024,0.003,0.115,0.012,0.034,0.008,0.066,0.012,0.068,0.01,0.651,0.076,fourAlpha_oneBeta_agencyBonus
+0.003,0.011,0.005,0.032,0.001,0.02,0.021,0.133,0.011,0.039,0.014,0.091,0.014,0.079,0.119,0.744,fourAlpha_twoBeta_agencyBonus

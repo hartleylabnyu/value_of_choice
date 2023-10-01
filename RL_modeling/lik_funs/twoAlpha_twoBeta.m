@@ -1,4 +1,3 @@
-%% 2 Params: alpha (0:1), beta (1e-6: 100)
 
 function [lik, latents] = twoAlpha_twoBeta(QbanditOrder, agencyChoiceVec, banditChoiceVec, outcome, agency, offer, leftBandit, rightBandit, x, priors)
 
@@ -6,8 +5,10 @@ alphaChoice = x(1);
 alphaComp = x(2);
 betaAgency = x(3);
 betaBandit = x(4);
-lik = 0;   % initialize log likelihood
-Qbandit = .5 * ones(3,2); % 2 bandits in each room
+
+% Initialize log likelihood and q values
+lik = 0;
+Qbandit = .5 * ones(3,2);
 
 % Loop through trials
 for ii = 1:length(outcome)
@@ -25,14 +26,9 @@ for ii = 1:length(outcome)
     % estimate EVcomp
     estEVcomp(ii) = .5*Qbandit(leftBanditQidx) + .5*Qbandit(rightBanditQidx) + thisTrial_offer/10;
     
-   % KN note - look into 
-   % if estEVcomp(ii)>1
-   %     estEVcomp(ii)=1;
-   % end
-    
     % estimate EVchoice
     estEVchoice(ii) = max([Qbandit(leftBanditQidx), Qbandit(rightBanditQidx)]);
-  
+    
     %combine both Q value estimates into a vector
     thisTrial_agencyQs = [estEVcomp(ii), estEVchoice(ii)];
     
@@ -41,34 +37,34 @@ for ii = 1:length(outcome)
     denominator = sum(exp(([estEVcomp(ii), estEVchoice(ii)])*betaAgency));
     
     % probability of selecting choice
-    lik_choice(ii) = numerator/denominator; 
+    lik_choice(ii) = numerator/denominator;
     
     %updating loglikelihood of choice
     lik = lik + log(lik_choice(ii));
- 
+    
     % bandit choice
     thisTrial_banditResp = banditChoiceVec(ii);
     thisTrial_banditQs = [Qbandit(leftBanditQidx), Qbandit(rightBanditQidx)];
     
     if thisTrial_banditResp == 1
-            selectedBandit = leftBandit{ii};
-        else
-            selectedBandit = rightBandit{ii};
+        selectedBandit = leftBandit{ii};
+    else
+        selectedBandit = rightBandit{ii};
     end
     
-     if agency(ii) == 1
-         alpha = alphaChoice;
-         numerator = exp(thisTrial_banditQs(thisTrial_banditResp)*betaBandit);
-         denominator = sum(exp((thisTrial_banditQs)*betaBandit));
-         lik_choice = numerator/denominator; % probability of selecting choice 1
-         
-         %updating loglikelihood of choice
-         lik = lik + log(lik_choice);
-     else
-         alpha = alphaComp;
-     end
-     
-     
+    if agency(ii) == 1
+        alpha = alphaChoice;
+        numerator = exp(thisTrial_banditQs(thisTrial_banditResp)*betaBandit);
+        denominator = sum(exp((thisTrial_banditQs)*betaBandit));
+        lik_choice = numerator/denominator; % probability of selecting choice 1
+        
+        %updating loglikelihood of choice
+        lik = lik + log(lik_choice);
+    else
+        alpha = alphaComp;
+    end
+    
+    
     % Update Q value
     RPE = outcome(ii) - thisTrial_banditQs(thisTrial_banditResp); % outcome minus expectation
     Qbandit(find(contains(QbanditOrder,selectedBandit))) = Qbandit(find(contains(QbanditOrder,selectedBandit))) + alpha * RPE;
@@ -78,17 +74,16 @@ for ii = 1:length(outcome)
     latents.estEVChoice(ii) = estEVchoice(ii);
     latents.estEVComp(ii) = estEVcomp(ii);
     latents.RPE(ii) = RPE;
-
     
 end
 
 
-% OPTIONAL: putting a prior on the parameters
+% Put priors on parameters
 if (priors)
- lik = lik + log(betapdf(alphaChoice,1.1,1.1));
- lik = lik + log(betapdf(alphaComp,1.1,1.1));
- lik = lik + log(gampdf(betaAgency,2,3));
- lik = lik + log(gampdf(betaBandit,2,3));
+    lik = lik + log(betapdf(alphaChoice,1.1,1.1));
+    lik = lik + log(betapdf(alphaComp,1.1,1.1));
+    lik = lik + log(gampdf(betaAgency,2,3));
+    lik = lik + log(gampdf(betaBandit,2,3));
 end
 
 

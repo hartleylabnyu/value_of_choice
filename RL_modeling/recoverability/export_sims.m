@@ -6,7 +6,7 @@ clear all;
 clc;
 
 %% Load simulated data %%
-sim_data = load('sim_data/sim_data_realParams');
+sim_data = load('sim_data/sim_data_realParams_16models');
 sim_data = sim_data.sim_data;
 
 %% Export each model as csv file %%
