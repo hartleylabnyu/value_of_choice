@@ -53,7 +53,7 @@ color2 = "#0077b6"
 color3 = "#03045e"
 
 # load data
-load("data/vocDataTidy.RData")
+load(here("data/vocDataTidy.RData"))
 ```
 
 # Participant demographics
@@ -324,9 +324,10 @@ banditTask.RT.data$zAbsVoC <- scale(banditTask.RT.data$absVoC)
 banditTask.RT.data$zVoC <- scale(banditTask.RT.data$uoc)
 banditTask.RT.data$zTrialOfCond <- scale(banditTask.RT.data$trialOfCond)
 
-agency.RT.model <- mixed(agencyLogRT ~ zAge * zAbsVoC * zTrialOfCond + (zAbsVoC * zTrialOfCond | subID),
+agency.RT.model <- mixed(agencyLogRT ~ zAge * zAbsVoC * zTrialOfCond + (zAbsVoC * zTrialOfCond || subID),
                          data = banditTask.RT.data,
                          method = "S", 
+                         expand_re = T,
                          control=lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e6)))
 
 agency.RT.model
@@ -366,6 +367,38 @@ agencyRT.VoC.plot <- ggplot(agencyRT.means,
 agencyRT.VoC.plot
 ```
 
+## Plot: Effect of VoC on RT by continuous age
+```{r continuous age RT plot, fig.height = 4, fig.width = 4, units = "in"}
+agency.RT.lmer <- mixed(agencyLogRT ~ zAbsVoC * zTrialOfCond + (zAbsVoC * zTrialOfCond || subID),
+                         data = banditTask.RT.data,
+                         method = "S", 
+                        expand_re = T,
+                         control=lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e6)),
+                        return = "merMod")
+
+#get fixed effect of zAbsVoC
+VoC_fixedeff <- as.data.frame(coef(summary(agency.RT.lmer)))$Estimate[2]
+
+#get random effects
+VoC_effects <- ranef(agency.RT.lmer)$subID %>%
+    rownames_to_column(var = "subID")
+
+#combine with age
+VoC_subEffects <- banditTask %>%
+    select(subID, age) %>% 
+    unique() %>%
+    left_join(VoC_effects, by = c("subID")) %>%
+    mutate(zVoCFull = re1.zAbsVoC + VoC_fixedeff)
+
+#plot age by VoC effect
+rt_plot_continuousAge <- ggplot(VoC_subEffects, aes(x = age, y = zVoCFull)) +
+    geom_point(color = "#EB6D1E") + 
+    geom_smooth(method = "lm", color = "#84347C", fill = "#84347C") +
+    perri_theme() + 
+    xlab("Age") +
+    ylab("Absolute Value of VoC Effect") 
+rt_plot_continuousAge
+```
 
 # Choice preference task 
 ## Choice preference task: summary stats
