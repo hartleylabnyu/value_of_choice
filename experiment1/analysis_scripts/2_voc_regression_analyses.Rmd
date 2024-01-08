@@ -1,0 +1,403 @@
+---
+title: "VoC Analyses Part 2: Regressions"
+date: 1/8/24
+output:
+    html_document:
+        df_print: 'paged'
+        toc: true
+        toc_float:
+            collapsed: false
+            smooth_scroll: true
+        number_sections: false
+        code_download: true
+        self_contained: true
+---
+```{r chunk settings, include = FALSE}
+# set chunk settings
+knitr::opts_chunk$set(echo = FALSE, 
+                      cache = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+knitr::opts_chunk$set(dpi=600)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+                      
+```{r setup, include=FALSE}
+
+# list all packages required for the analysis
+list_of_packages <- c("tidyverse", "afex", "pander")
+
+# load all packages 
+lapply(list_of_packages, library, character.only = TRUE)
+
+# add theme for plotting
+voc_theme <- function () {
+  theme(
+    panel.border = element_rect(fill = "transparent", color="gray75"),
+    panel.background  = element_blank(),
+    plot.background = element_blank(), 
+    legend.background = element_rect(fill="transparent", colour=NA),
+    legend.key = element_rect(fill="transparent", colour=NA),
+    line = element_blank(),
+    axis.ticks = element_line(color="gray75"),
+    text=element_text(family="Avenir"),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 15),
+    title = element_text(size = 15),
+    strip.background = element_blank(),
+    strip.text = element_text(size=12)
+  )
+}
+
+color1 = "#00b4d8"
+color2 = "#0077b6"
+color3 = "#03045e"
+
+
+#z-score function
+scale_this <- function(x){
+  (x - mean(x, na.rm=TRUE)) / sd(x, na.rm=TRUE)
+}
+
+```
+
+# Participant info
+```{r participants plot}
+
+#load demographic info
+sub_info <- read_csv('data/voc_sub_info.csv') 
+
+# plot histogram of male and female participants
+sub_info %>% mutate(whole_age = floor(age)) %>% 
+    group_by(subID, gender, whole_age) %>% 
+    distinct(subID) %>% 
+    ggplot(., aes(x=whole_age, fill=gender)) +
+    geom_histogram(binwidth = 1, color="white") +
+    scale_fill_manual(name="Sex",
+                    labels=c("Female", "Male"),
+                    values=c(color1, color2)) +
+    scale_y_continuous(breaks = c(2,4,6,8,10),
+                   labels = c("2","4","6","8","10"),
+                   limits = c(0,10)) +
+    xlab("Age") +
+    ylab("Count") +
+    voc_theme()
+```
+
+```{r participant info}
+
+#load demographic info
+sub_info <- read_csv('data/voc_sub_info.csv') %>%
+    mutate(age_group = case_when(age < 13 ~ "Children",
+                                 age > 12.99 & age < 18 ~ "Adolescents",
+                                 age > 17.99 ~ "Adults"))
+
+sub_info$age_group <- factor(sub_info$age_group, levels = c("Children", "Adolescents", "Adults"))
+
+# age group information
+age_group_info <- sub_info %>%
+    group_by(age_group) %>%
+    summarize(N = n(), 
+              meanAge = mean(age),
+              sdAge = sd(age),
+              nFemale = sum(gender == "F")
+              )
+
+pander(age_group_info)
+```
+
+
+# Agency task: Machine selection
+## Model: Optimal machine choices across trials by condition and age
+```{r machine choices across trials by age}
+
+# Read in data
+banditTask <- read_csv('data/processed/bandit_task.csv') 
+
+#combine with participant age
+banditTask <- full_join(banditTask, sub_info, by = c("subID"))
+
+# Filter data to have only trials where people choose agency and exclude trials with 50-50 condition 
+banditTask.filtered <- banditTask %>% 
+    filter(agency == 1, condition!="bandits5050")
+
+# Scale continuous variables
+banditTask.filtered$zAge <- scale_this(banditTask.filtered$age)
+banditTask.filtered$zTrialOfCond <- scale_this(banditTask.filtered$trialOfCond)
+
+# Mixed-effects logistic regression model
+correct_byConditionTrialAge.mixed <- mixed(stage_2_acc ~ condition*zTrialOfCond*(zAge) + (condition*zTrialOfCond|subID), 
+                data = banditTask.filtered,
+                family = binomial, 
+                method = "LRT",
+                control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e6)))
+
+#display model stats
+correct_byConditionTrialAge.mixed 
+summary(correct_byConditionTrialAge.mixed)
+```
+
+## Plot: Proportion optimal machine selections across age groups and trials
+```{r plot bandit choices across trials, width = 7, height = 4, unit = "in"}
+
+banditTaskSubMeans <- banditTask %>%
+    mutate(block = floor((trial-1)/21) + 1) %>%
+    filter(agency==1, condition!="bandits5050") %>% 
+    group_by(condition, block, age_group, subID) %>% 
+    summarize(pctCorrect = mean(stage_2_acc))
+
+banditTaskMeans <- banditTaskSubMeans %>%
+    group_by(condition, block, age_group) %>% 
+    summarize(pctCorr = mean(pctCorrect),
+              se = sd(pctCorrect)/sqrt(n()))
+
+machineSelectionPlot <- ggplot(banditTaskMeans, aes(x=block, y=pctCorr, color=condition)) +
+    facet_wrap(~age_group) +
+    geom_point(size = 3) +
+    geom_jitter(data = banditTaskSubMeans,  aes(x = block, y = pctCorrect, color=condition), size = .5) +
+    geom_smooth(method = "lm", aes(fill = condition)) +
+    geom_hline(yintercept = .5, linetype="dashed") +
+    ylab("Proportion Optimal Machine Selections") +
+    xlab("Block") +
+    scale_x_continuous(breaks = c(4, 8, 12)) +
+    scale_fill_manual(name="Condition",
+                      labels=c("70/30",
+                               "90/10"),
+                      values=c(color1, color3), 
+                      guide = guide_legend(reverse=TRUE)) +
+    scale_color_manual(name="Condition",
+                      labels=c("70/30",
+                               "90/10"),
+                      values=c(color1, color3),
+                     guide = guide_legend(reverse=TRUE)) +
+    voc_theme() +
+    theme(strip.text = element_text(size=12))
+machineSelectionPlot
+```
+
+
+# Agency task: Agency decisions 
+## Model: Agency decisions by VoC
+```{r voc model}
+
+#scale voc
+banditTask$zVoC <- scale_this(banditTask$voc)
+banditTask$zTrialOfCond <- scale_this(banditTask$trialOfCond)
+banditTask$zAge <- scale_this(banditTask$age)
+
+# predict agency choice from utility of control, trial, linear age
+agency_byVOCTrialAge.mixed = mixed(agency ~ zVoC * zTrialOfCond * zAge + (zVoC * zTrialOfCond|subID), 
+                        data = banditTask, 
+                        family = binomial, 
+                        method = "LRT", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=1e6))) 
+
+#display stats
+agency_byVOCTrialAge.mixed
+summary(agency_byVOCTrialAge.mixed)
+```
+
+## Model: Agency decisions when VoC = 0
+```{r voc 0 model}
+
+#filter data
+banditTask.vocZeroTrials <- banditTask %>%
+    filter(voc == 0)
+
+#scale age
+banditTask.vocZeroTrials$zAge <- scale(banditTask.vocZeroTrials$age)
+
+# predict agency choice from utility of control, trial, linear age
+agency_vocZero_byAge.mixed = mixed(agency ~  zAge + (1|subID), 
+                        data = banditTask.vocZeroTrials, 
+                        family = binomial, 
+                        method = "LRT", control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e6))) 
+
+#display stats
+agency_vocZero_byAge.mixed
+summary(agency_vocZero_byAge.mixed)
+```
+
+## Plot: Sensitivity to the value of choice
+```{r voc plot, fig.height = 4, fig.width = 7, unit = "in"}
+
+VoC_plot_sub_means <- banditTask %>% 
+    mutate(taskHalf = case_when(trial < 158 ~ "First Half of Task",
+                                trial > 157 ~ "Second Half of Task")) %>%
+    group_by(age_group, taskHalf, voc, subID) %>%
+    summarize(meanSubAgency = mean(agency, na.rm = T))
+
+VoC_plot_means <- VoC_plot_sub_means %>% 
+    group_by(age_group, taskHalf, voc) %>%
+    summarize(meanAgency = mean(meanSubAgency, na.rm = T),
+              seAgency = sd(meanSubAgency / sqrt(n())))
+
+#plot
+VoC_plot <- ggplot(VoC_plot_means, aes(x = voc, y = meanAgency, color = age_group)) +
+    facet_wrap(~taskHalf) +
+    geom_point(aes(color = age_group)) + 
+    geom_errorbar(aes(color = age_group, ymin = meanAgency - seAgency, ymax = meanAgency + seAgency), width = .1) + 
+    geom_line(aes(group = age_group)) +
+    scale_color_manual(values=c("#84347C", "#B40424", "#EB6D1E"), name = "Age Group") +
+    xlab("Value of Choice (VoC)") +
+    ylab("Proportion Agency Choices") +
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    geom_vline(xintercept = 0, linetype = "dashed") +
+    voc_theme()
+VoC_plot
+```
+
+## Plot: Sensitivity to value of control with continuous age 
+```{r voc plot continuous age, fig.height = 3.9, fig.width = 3, unit = "in"}
+
+#run model without age to get random effects for each participant
+agency_byVOCTrial.glmer = mixed(agency ~ zVoC * zTrialOfCond + (zVoC * zTrialOfCond|subID), 
+                        data = banditTask, 
+                        family = binomial, 
+                        method = "LRT", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=1e6)),
+                        return = "merMod") 
+
+#get fixed effect of zVoC
+VoC_fixedeff <- as.data.frame(coef(summary(agency_byVOCTrial.glmer)))$Estimate[2]
+VoC_int_fixedeff <- as.data.frame(coef(summary(agency_byVOCTrial.glmer)))$Estimate[4]
+
+#get random effects
+VoC_effects <- ranef(agency_byVOCTrial.glmer)$subID %>%
+    rownames_to_column(var = "subID")
+
+#combine with age
+VoC_subEffects <- banditTask %>%
+    select(subID, age) %>% 
+    unique() %>%
+    left_join(VoC_effects, by = c("subID")) %>%
+    mutate(zVoCFull = zVoC + VoC_fixedeff, 
+           intFull = `zVoC:zTrialOfCond` + VoC_int_fixedeff)
+
+#plot age by VoC effect
+VoC_plot_continuousAge <- ggplot(VoC_subEffects, aes(x = age, y = zVoCFull)) +
+    geom_point(color = "#EB6D1E") + 
+    geom_smooth(method = "lm", color = "#84347C", fill = "#84347C") +
+    voc_theme() + 
+    xlab("Age") +
+    ylab("VoC Effect") 
+VoC_plot_continuousAge
+
+#plot age by VoC x trial effect
+VoC_plot_continuousAgeTrial <- ggplot(VoC_subEffects, aes(x = age, y = intFull)) +
+    geom_point(color = "#EB6D1E") + 
+    geom_smooth(method = "lm", color = "#84347C", fill = "#84347C") +
+    voc_theme() + 
+    xlab("Age") +
+    ylab("VoC x Trial Effect") 
+VoC_plot_continuousAgeTrial
+```
+
+
+## Summary stats: Sensitivity to value of control
+```{r voc summary stats}
+
+# What proportion of trials did participants choose agency when VoC was 0?
+VoC_zero_means_sub <- banditTask %>% 
+    filter(voc == 0) %>%
+    group_by(subID, age_group) %>%
+    summarize(meanSubAgency = mean(agency, na.rm = T))
+
+VoC_zero_means <- VoC_zero_means_sub %>%
+    summarize(meanAgency = mean(meanSubAgency, na.rm = T),
+              seAgency = sd(meanSubAgency / sqrt(n())))
+VoC_zero_means
+```
+
+
+# Choice preference task 
+## Choice preference task: summary stats
+```{r reward sense summary stats}
+
+# Read in data
+rewardSense <- read_csv('data/processed/reward_sensitivity_task.csv') 
+
+#combine with age
+rewardSense <- full_join(rewardSense, sub_info, by = c("subID"))
+
+# summary stats for accuracy
+overallAcc <- rewardSense %>% 
+    group_by(subID) %>% 
+    filter(accuracy!=0) %>% 
+    summarize(m=mean(correct, na.rm=T)) %>% 
+    ungroup() %>% 
+    summarize(meanAccuracy = mean(m), stdev = sd(m))
+overallAcc
+
+# mean = 76.9%
+# stdev = 15.3%
+```
+
+## Model: Choice preference task accuracy
+```{r bandit choices across by age in post-task assessment}
+
+# first, filter data and rescale variables
+rewardSense.filtered <- rewardSense %>%  
+    filter(accuracy!=0)
+
+# rescale variables of age and the true probability differences between two displayed bandits 
+rewardSense.filtered$zAge <- scale(rewardSense.filtered$age)
+rewardSense.filtered$zDiff<- scale(rewardSense.filtered$diff)
+
+# run model
+rewardSense.mixed <- mixed(correct~zDiff*zAge + (zDiff|subID), 
+                           data= rewardSense.filtered,
+                           family = binomial,
+                           method = "LRT")
+rewardSense.mixed 
+```
+
+
+# Explicit reward knowledge task 
+## Explicit reward knowledge task: summary stats
+```{r explicit knowledge task}
+
+# Read in data
+explicitKnow <- read_csv('data/processed/explicit_knowledge_task.csv') 
+
+#combine with age
+explicitKnow <- full_join(explicitKnow, sub_info, by = c("subID"))
+
+explicitKnow %>% 
+  group_by(subID, age) %>% 
+  summarize(m = mean(error)) %>% 
+  ungroup() %>% 
+  summarize(meanErr = mean(m, na.rm=T), sd = sd(m,na.rm = T))
+```
+
+## Model: Explicit reward knowledge by age and true probabilities
+```{r explicit knowledge model}
+# predict trial-level error from true probability and age
+
+#re-scale age and zTrueProb
+explicitKnow.filtered <- explicitKnow %>%
+    select(subID, age, trueProb, response, error) %>%
+    drop_na()
+
+explicitKnow.filtered$zAge <- scale(explicitKnow.filtered$age)
+explicitKnow.filtered$zTrueProb <- scale(explicitKnow.filtered$trueProb)
+
+# run model
+explicitKnow_errorbyTrueProbAge.mixed <- mixed(error ~ zTrueProb*zAge + (1|subID), 
+                                               data = explicitKnow.filtered,
+                                               method = "S") 
+explicitKnow_errorbyTrueProbAge.mixed
+```
+
+## Plot: Explicit reward knowledge
+```{r plot explicit knowledge}
+# plot response by bandit
+explicitKnow %>% 
+    ggplot(., aes(x=bandit,y=response, fill=age_group)) +
+    geom_boxplot() +
+    scale_fill_manual(values = c(color1, color2, color3), name = "Age Group") +
+    ylab("Reported Reward Probability") +
+    xlab("True Reward Probability") +
+    scale_x_discrete(labels = c("10%", "30%", "50%", "50%", "70%", "90%")) +
+    scale_y_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9), 
+                     labels = c("10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%")) +
+    voc_theme()
+```

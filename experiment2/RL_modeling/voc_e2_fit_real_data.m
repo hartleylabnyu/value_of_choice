@@ -1,0 +1,257 @@
+%%%%%% VoC E2 Fit Models %%%%%
+% Kate Nussenbaum
+% Last edited: 12/17/23
+
+%clear everything
+clear;
+
+% load path to likelihood functions
+addpath('lik_funs/');
+
+% load data
+data = readtable('../rl_data.csv');
+
+%remove NaNs
+data = data(~isnan(data.stage_1_choice), :);
+data = data(~isnan(data.stage_2_choice), :);
+        
+
+%get number of subjects
+subIDs = unique(data.subject_id);
+n_subjects = length(subIDs);
+
+
+%% VARIABLES TO MODIFY %%
+% save filename
+filename = 'output/all_16_models_100iter';
+
+% Determine number of iterations - set to 100
+niter = 100;
+
+% models to fit
+
+%%%%%%%%%%%%%%%%%%%
+% ONE BETA MODELS %
+%%%%%%%%%%%%%%%%%%%
+
+% oneAlpha_oneBeta
+% twoAlpha_oneBeta
+% twoAlphaValenced_oneBeta
+% fourAlpha_oneBeta
+
+%%%%%%%%%%%%%%%%%%%
+% TWO BETA MODELS %
+%%%%%%%%%%%%%%%%%%%
+
+% oneAlpha_twoBeta
+% twoAlpha_twoBeta
+% twoAlphaValenced_twoBeta
+% fourAlpha_twoBeta
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ONE BETA AGENCY BONUS MODELS %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% oneAlpha_oneBeta_agencyBonus
+% twoAlpha_oneBeta_agencyBonus
+% twoAlphaValenced_oneBeta_agencyBonus
+% fourAlpha_oneBeta_agencyBonus
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TWO BETA AGENCY BONUS MODELS %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% oneAlpha_twoBeta_agencyBonus
+% twoAlpha_twoBeta_agencyBonus
+% twoAlphaValenced_twoBeta_agencyBonus
+% fourAlpha_twoBeta_agencyBonus
+
+
+%specify list of models
+models = {'oneAlpha_oneBeta', 'oneAlpha_twoBeta', 'twoAlpha_oneBeta', 'twoAlpha_twoBeta', ...
+       'twoAlphaValenced_oneBeta', 'twoAlphaValenced_twoBeta', 'fourAlpha_oneBeta', 'fourAlpha_twoBeta', ...
+       'oneAlpha_oneBeta_agencyBonus', 'oneAlpha_twoBeta_agencyBonus', 'twoAlpha_oneBeta_agencyBonus', 'twoAlpha_twoBeta_agencyBonus', ...
+       'twoAlphaValenced_oneBeta_agencyBonus', 'twoAlphaValenced_twoBeta_agencyBonus', 'fourAlpha_oneBeta_agencyBonus', 'fourAlpha_twoBeta_agencyBonus' };
+
+%preallocate structure to save results
+model_fits(length(models)) = struct();
+
+%% FIT MODELS TO DATA %%
+%----------------------------------%
+% Loop through models and subjects %
+%----------------------------------%
+
+for m = 1:length(models)
+    model_to_fit = models{m};
+    
+    %print message about which subject is being fit
+    fprintf('Fitting model %d out of %d...\n', m, length(models))
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Model-specific info %
+    %%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+        % ONE BETA
+        if strcmp(model_to_fit, 'oneAlpha_oneBeta')
+            n_params = 2;
+            lb = [1e-6, 1e-6];
+            ub = [1, 30];
+        elseif strcmp(model_to_fit, 'twoAlpha_oneBeta')
+            n_params = 3;
+            lb = [1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 30];
+        elseif strcmp(model_to_fit, 'twoAlphaValenced_oneBeta')
+            n_params = 3;
+            lb = [1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 30];
+        elseif strcmp(model_to_fit, 'fourAlpha_oneBeta')
+            n_params = 5;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 1, 1, 30];
+    
+        %TWO BETA
+        elseif strcmp(model_to_fit, 'oneAlpha_twoBeta')
+            n_params = 3;
+            lb = [1e-6, 1e-6, 1e-6];
+            ub = [1, 30, 30];
+        elseif strcmp(model_to_fit, 'twoAlpha_twoBeta')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 30, 30];
+        elseif strcmp(model_to_fit, 'twoAlphaValenced_twoBeta')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 30, 30];
+        elseif strcmp(model_to_fit, 'fourAlpha_twoBeta')
+            n_params = 6;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6, 1e-6];
+            ub = [1, 1, 1, 1, 30, 30];
+    
+        % ONE BETA AGENCY BONUS
+        elseif strcmp(model_to_fit, 'oneAlpha_oneBeta_agencyBonus')
+            n_params = 3;
+            lb = [1e-6, 1e-6, -5];
+            ub = [1, 30, 5];
+        elseif strcmp(model_to_fit, 'twoAlpha_oneBeta_agencyBonus')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 30, 5];
+        elseif strcmp(model_to_fit, 'twoAlphaValenced_oneBeta_agencyBonus')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 30, 5];
+        elseif strcmp(model_to_fit, 'fourAlpha_oneBeta_agencyBonus')
+            n_params = 6;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 1, 1, 30, 5];
+    
+        %TWO BETA AGENCY BONUS
+        elseif strcmp(model_to_fit, 'oneAlpha_twoBeta_agencyBonus')
+            n_params = 4;
+            lb = [1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 30, 30, 5];
+        elseif strcmp(model_to_fit, 'twoAlpha_twoBeta_agencyBonus')
+            n_params = 5;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 30, 30, 5];
+        elseif strcmp(model_to_fit, 'twoAlphaValenced_twoBeta_agencyBonus')
+            n_params = 5;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 30, 30, 5];
+        elseif strcmp(model_to_fit, 'fourAlpha_twoBeta_agencyBonus')
+            n_params = 7;
+            lb = [1e-6, 1e-6, 1e-6, 1e-6, 1e-6, 1e-6, -5];
+            ub = [1, 1, 1, 1, 30, 30, 5];
+        end
+    
+    
+    % convert function name to function
+    model_filename = ['output/model_fits_real_data/fit_', model_to_fit];
+    fh = str2func(model_to_fit);
+    
+    % generate matrices to save data
+    [logpost, negloglik, AIC, BIC] = deal(nan(n_subjects, 1));
+    [params] = nan(n_subjects, n_params);
+    
+    %determine csv filename for model results
+    csv_filename = ['output/model_fits_real_data/', model_to_fit, '.csv'];
+    
+    %loop through subjects
+    parfor s = 1:n_subjects
+        
+        %print message about which subject is being fit
+        fprintf('Fitting subject %d out of %d...\n', s, n_subjects)
+        
+        %get subject
+        subID = subIDs(s);
+        subject = int2str(subID);
+        
+        %determine filename for latents
+        latents_filename{s} = ['output/model_fits_real_data/latents/latents_', model_to_fit, '_', subject, '.csv'];
+        
+        % load subject data file
+        sub_data = data(data.subject_id == subID, :);
+        
+        % get trial information
+        outcome = sub_data.stage_3_outcome ./10; %vector of ones and zeros
+        agency = sub_data.stage_1_choice; %vector of ones (agency) and zeros (no agency)
+        banditChoice = sub_data.stage_2_choice; % vector of ones (L) and zeros (R)
+        leftBandit = sub_data.arcade_id_L + 1; %vector of 1 - 6
+        rightBandit = sub_data.arcade_id_R + 1; % vector of 1 - 6
+        offer = sub_data.offer; % vector of 0 - 6
+        
+        for iter = 1:niter  % run niter times from random initial conditions, to get best fit
+            
+            % choose a random number between the lower and upper bounds to initialize each of the parameters
+            starting_points = rand(1,length(lb)).* (ub - lb) + lb; % random initialization
+            
+            % Run fmincon
+            [res, nlp] = ...
+                fmincon(@(x) fh(banditChoice, outcome, agency, offer, leftBandit, rightBandit, x, 1),...
+                starting_points,[],[],[],[],lb, ub,[],...
+                optimset('maxfunevals', 10000, 'maxiter', 2000, 'Display', 'off'));
+            
+            %flip sign to get log posterior (if priors are in models, if no priors, this will be the log likelihood)
+            logp = -1 * nlp;
+            
+            %store results if minimum is found
+            if iter == 1 || logpost(s) < logp
+                logpost(s) = logp;
+                params(s, :) = res;
+                [negloglik(s), latents(s)] = fh(banditChoice, outcome, agency, offer, leftBandit, rightBandit, res, 0); %fit model w/ 'winning' parameters w/o priors to get the negative log likelihood
+                AIC(s) = 2*negloglik(s) + 2*length(res);
+                num_bandit_choices = length(find(agency == 1));
+                BIC(s) = 2*negloglik(s) + length(res)*log(length(agency) + num_bandit_choices); %add number of bandit choices participant actually made - from banditChoiceVec
+                age_group{s} = subject(end);
+                sub{s} = subject;
+                
+                %write latents CSV for each participant
+                dlmwrite(latents_filename{s}, [latents(s).banditQs(:,1), latents(s).banditQs(:,2), latents(s).estEVChoice', latents(s).estEVComp', latents(s).RPE']);
+            end
+            
+        end
+        
+    end
+    results.sub = sub;
+    results.logpost = logpost;
+    results.params = params;
+    results.negloglik = negloglik;
+    results.AIC = AIC;
+    results.BIC = BIC;
+    
+    %write csv for each model
+    dlmwrite(csv_filename, [results.negloglik, results.logpost, results.AIC, results.BIC, results.params]);
+    
+    %save structure for each model
+    model_fits(m).results = results;
+    model_fits(m).fit_model = model_to_fit;
+    model_fit = model_fits(m);
+    
+    %Save fitting results
+    save(model_filename, 'model_fit');
+    
+end
+
+%Save fitting results
+save(filename, 'model_fits');
+

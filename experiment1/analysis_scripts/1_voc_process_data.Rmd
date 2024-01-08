@@ -1,0 +1,100 @@
+---
+title: "VoC Analyses Part 1: Process Raw Data"
+date: 1/7/24
+output:
+    html_document:
+        df_print: 'paged'
+        toc: true
+        toc_float:
+            collapsed: false
+            smooth_scroll: true
+        number_sections: false
+        code_download: true
+        self_contained: true
+---
+
+```{r chunk settings, include = FALSE}
+# set chunk settings
+knitr::opts_chunk$set(echo = FALSE, 
+                      cache = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+knitr::opts_chunk$set(dpi=600)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+```{r setup, include=FALSE}
+
+# list all packages required for the analysis
+list_of_packages <- c("here", "tidyverse")
+
+# load all packages 
+lapply(list_of_packages, library, character.only = TRUE)
+
+```
+
+```{r import subject info, include = F}
+
+# read in subject info
+sub_info <- read_csv('data/voc_sub_info.csv') 
+```
+
+# Process bandit task data
+
+```{r process bandit task data, include = F}
+
+# set directory
+data_dir <- 'data/task_data/'
+
+# read in data
+bandit_data <- list.files(path = data_dir,
+                       pattern = "*_banditTask.csv",
+                       full.names = TRUE) %>%
+  lapply(read_csv) %>%
+  bind_rows() %>%
+    select(-c(EV_choose:optimal)) %>% 
+    mutate(ev_choice = case_when(condition == 'bandits5050' ~ 5,
+                                  condition == 'bandits7030' ~ 7,
+                                  condition == 'bandits9010' ~ 9,
+                                  ),
+           ev_comp = 5 + tokenOffer,
+           voc = ev_choice - ev_comp,
+           stage_2_acc = case_when(selectedBandit == 'bandit30' ~ 0,
+                                   selectedBandit == 'bandit10' ~ 0,
+                                   selectedBandit == 'bandit70' ~ 1,
+                                   selectedBandit == 'bandit90' ~ 1)) 
+
+#save as csv
+write_csv(bandit_data, 'data/processed/bandit_task.csv')
+```
+
+# Process reward sensitivity task
+```{r process reward sensitivity task data, include = F}
+
+# read in data
+rs_data <- list.files(path = data_dir,
+                       pattern = "*_rewardSense.csv",
+                       full.names = TRUE) %>%
+  lapply(read_csv) %>%
+  bind_rows() %>% 
+    mutate( diff = abs(as.numeric(str_extract(leftBandit,"\\d")) - as.numeric(str_extract(rightBandit,"\\d")))/10,
+            correct = ifelse(accuracy == 1, 1, 0))
+
+#save as csv
+write_csv(rs_data, 'data/processed/reward_sensitivity_task.csv')
+```
+
+# Process explicit knowledge task
+```{r process explicit knowledge task data, include = F}
+
+# read in data
+ek_data <- list.files(path = data_dir,
+                       pattern = "*_explicitKnow.csv",
+                       full.names = TRUE) %>%
+  lapply(read_csv) %>%
+  bind_rows() %>% 
+    mutate(error = abs(response-trueProb))
+
+#save as csv
+write_csv(ek_data, 'data/processed/explicit_knowledge_task.csv')
+```

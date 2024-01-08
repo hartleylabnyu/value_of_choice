@@ -1,0 +1,197 @@
+---
+title: "E2 VoC Analyses Part 1: Process Raw Data"
+date: 1/8/24
+output:
+    html_document:
+        df_print: 'paged'
+        toc: true
+        toc_float:
+            collapsed: false
+            smooth_scroll: true
+        number_sections: false
+        code_download: true
+        self_contained: true
+---
+
+```{r chunk settings, include = FALSE}
+# set chunk settings
+knitr::opts_chunk$set(echo = FALSE, 
+                      cache = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+knitr::opts_chunk$set(dpi=600)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+```{r load libraries, include = F}
+
+#load libraries
+library(tidyverse)
+library(glue)
+
+#load scripts
+source('analysis_scripts/voc_functions.R')
+
+```
+
+```{r import data}
+
+# set directory
+data_dir <- 'data/task_data/'
+
+# read in data and filter out incomplete files
+data_all <- list.files(path = data_dir,
+                       pattern = "*.csv",
+                       full.names = TRUE) %>%
+  lapply(read_data) %>%
+  bind_rows()
+
+```
+
+```{r determine exclusions based on data quality}
+
+# Compute quality metrics
+# 1. Browser interactions < 20
+# 2. Missed first-stage choices < 31 trials
+# 3. First-stage RTs < 150 ms < 21 trials
+
+browser_summary <- data_all %>%
+  group_by(subject_id) %>%
+  summarize(browser_interactions = mean(num_interactions)) %>%
+  mutate(bad_data1 = ifelse(browser_interactions > 20, 1, 0))
+
+missed_choices <- data_all %>%
+  filter(phase == 'experiment') %>%
+  group_by(subject_id) %>%
+  summarize(
+    missed_choices = sum(is.na(stage_1_choice)),
+    agency_trials = sum(stage_1_choice == 1, na.rm = T),
+    forgo_trials = sum(stage_1_choice == 0, na.rm = T),
+    total_stage_1 = agency_trials + forgo_trials,
+    fast_choices = sum(stage_1_rt < 150, na.rm = T)
+  ) %>%
+  mutate(bad_data2 = ifelse(missed_choices > 30 |
+                              fast_choices > 30 |
+                              total_stage_1 < 285, 1, 0))
+
+#combine
+sub_summary <-
+  full_join(browser_summary, missed_choices, by = 'subject_id') %>%
+  group_by(subject_id) %>%
+  mutate(bad_data = sum(bad_data1, bad_data2)) %>%
+  ungroup()
+
+#save summary
+write_csv(sub_summary, 'data/processed/data_quality.csv')
+
+#table of stats about exclusions
+exclusion_stats <- sub_summary %>%
+  group_by(bad_data1, bad_data2) %>%
+  summarize(N = n())
+
+# Filter bad subjects out of data
+good_subs <- sub_summary %>%
+  filter(bad_data == 0)
+
+data <- data_all %>%
+  filter(subject_id %in% good_subs$subject_id)
+
+#save learning data
+learning_data <- data %>%
+  select(
+    subject_id,
+    phase,
+    trial,
+    context,
+    offer,
+    block,
+    arcade_color_L,
+    arcade_color_R,
+    reward_prob_L,
+    reward_prob_R,
+    stage_1_choice,
+    stage_1_rt,
+    stage_2_choice,
+    stage_2_rt,
+    stage_3_outcome
+  ) %>%
+filter(phase == "experiment")
+
+#save
+write_csv(learning_data, 'data/processed/learning_data.csv')
+
+
+#save rl data
+rl_data <- data %>%
+  filter(phase == "experiment") %>%
+  select(
+    subject_id,
+    trial,
+    context,
+    offer,
+    block,
+    arcade_id_L,
+    arcade_id_R,
+    reward_prob_L,
+    reward_prob_R,
+    stage_1_choice,
+    stage_2_choice,
+    stage_3_outcome
+  ) 
+
+write_csv(rl_data, 'data/processed/rl_data.csv')
+
+```
+
+
+```{r explicit knowledge data processing}
+# Relabel explicit knowledge trials based on reward probabilities
+# machine 1: red #D8271C
+# machine 2: purple #741CD8
+# machine 3: blue #3386FF
+# machine 4: orange #D89F1C
+# machine 5: pink #FA92F8
+# machine 6: green #1CD855
+
+# Get reward probabilities for each machine
+reward_probs <-
+  data %>% select(subject_id, arcade_color_L, reward_prob_L) %>%
+  unique() %>%
+  drop_na() %>%
+  mutate(
+    machine_color = case_when(
+      arcade_color_L == "#D8271C" ~ "red",
+      arcade_color_L == "#741CD8" ~ "purple",
+      arcade_color_L == "#3386FF" ~ "blue",
+      arcade_color_L == "#D89F1C" ~ "orange",
+      arcade_color_L == "#FA92F8" ~ "pink",
+      arcade_color_L == "#1CD855" ~ "green"
+    )
+  ) %>%
+  select(-arcade_color_L) %>%
+  pivot_wider(names_from = machine_color, values_from = reward_prob_L)
+
+
+explicit <- data %>%
+  filter(phase == "explicit") %>%
+  select(subject_id, stimulus, response, rt) %>%
+  drop_na()
+
+explicit_data <-
+  full_join(explicit, reward_probs, by = c("subject_id")) %>%
+  mutate(
+    true_prob = case_when(
+      parse_number(stimulus) == 1 ~ red,
+      parse_number(stimulus) == 2 ~ purple,
+      parse_number(stimulus) == 3 ~ blue,
+      parse_number(stimulus) == 4 ~ orange,
+      parse_number(stimulus) == 5 ~ pink,
+      parse_number(stimulus) == 6 ~ green
+    ),
+    error = abs((true_prob * 10) - response)
+  )
+
+#save explicit data
+write_csv(explicit_data, 'data/processed/explicit_data.csv')
+```
+

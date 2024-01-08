@@ -1,0 +1,238 @@
+---
+title: "VoC Analyses Part 4: Recoverability"
+date: 1/8/24
+output:
+    html_document:
+        df_print: 'paged'
+        toc: true
+        toc_float:
+            collapsed: false
+            smooth_scroll: true
+        number_sections: false
+        code_download: true
+        self_contained: true
+---
+```{r chunk settings, include = FALSE}
+# set chunk settings
+knitr::opts_chunk$set(echo = FALSE, 
+                      cache = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+knitr::opts_chunk$set(dpi=600)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+                      
+```{r setup, include=FALSE}
+# list all packages required for the analysis
+list.of.packages <- c("tidyverse", "latex2exp", "patchwork", "ggpubr")
+
+# check if all packages are installed, if not, install them.
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+# load all packages 
+lapply(list.of.packages, library, character.only = TRUE)
+
+# add theme for plotting
+voc_theme <- function () {
+  theme(
+    panel.border = element_rect(fill = "transparent", color="gray75"),
+    panel.background  = element_blank(),
+    plot.background = element_blank(), 
+    legend.background = element_rect(fill="transparent", colour=NA),
+    legend.key = element_rect(fill="transparent", colour=NA),
+    line = element_blank(),
+    axis.ticks = element_line(color="gray75"),
+    text=element_text(family="Avenir"),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 15),
+    title = element_text(size = 15),
+    strip.background = element_blank(),
+    strip.text = element_text(size=12)
+  )
+}
+
+color1 = "#00b4d8"
+color2 = "#0077b6"
+color3 = "#03045e"
+
+```
+
+# Model recovery
+```{r load model recoverability results}
+
+model_recov <- read_csv("RL_modeling/output/aic_recovery_16models.csv") %>%
+    pivot_longer(cols = oneAlpha_oneBeta:fourAlpha_twoBeta_agencyBonus,
+                 names_to = "sim_model",
+                 values_to = "prop")
+
+
+model_recov$sim_model <- factor(model_recov$sim_model, 
+                              levels = c("oneAlpha_oneBeta",
+                                         "oneAlpha_twoBeta",
+                                         "twoAlpha_oneBeta",
+                                         "twoAlpha_twoBeta",
+                                         "twoAlphaValenced_oneBeta",
+                                         "twoAlphaValenced_twoBeta",
+                                         "fourAlpha_oneBeta",
+                                         "fourAlpha_twoBeta",
+                                         "oneAlpha_oneBeta_agencyBonus",
+                                         "oneAlpha_twoBeta_agencyBonus",
+                                         "twoAlpha_oneBeta_agencyBonus",
+                                         "twoAlpha_twoBeta_agencyBonus",
+                                         "twoAlphaValenced_oneBeta_agencyBonus",
+                                         "twoAlphaValenced_twoBeta_agencyBonus",
+                                         "fourAlpha_oneBeta_agencyBonus",
+                                         "fourAlpha_twoBeta_agencyBonus"),
+                              labels = c(TeX('$one\\alpha\\_one\\beta'),
+                                TeX('$one\\alpha\\_two\\beta'),
+                                TeX('$twoChoice\\alpha\\_one\\beta'),
+                                TeX('$twoChoice\\alpha\\_two\\beta'),
+                                TeX('$twoValenced\\alpha\\_one\\beta'),
+                                TeX('$twoValenced\\alpha\\_two\\beta'),
+                                TeX('$four\\alpha\\_one\\beta'),
+                                TeX('$four\\alpha\\_two\\beta'),
+                                TeX('$one\\alpha\\_one\\beta$_AB'),
+                                TeX('$one\\alpha\\_two\\beta$_AB'),
+                                TeX('$twoChoice\\alpha\\_one\\beta$_AB'),
+                                TeX('$twoChoice\\alpha\\_two\\beta$_AB'),
+                                TeX('$twoValenced\\alpha\\_one\\beta$_AB'),
+                                TeX('$twoValenced\\alpha\\_two\\beta$_AB'),
+                                TeX('$four\\alpha\\_one\\beta$_AB'),
+                                TeX('$four\\alpha\\_two\\beta$_AB')))
+
+model_recov$RecoveredModel <- factor(model_recov$RecoveredModel, 
+                              levels = c("oneAlpha_oneBeta",
+                                         "oneAlpha_twoBeta",
+                                         "twoAlpha_oneBeta",
+                                         "twoAlpha_twoBeta",
+                                         "twoAlphaValenced_oneBeta",
+                                         "twoAlphaValenced_twoBeta",
+                                         "fourAlpha_oneBeta",
+                                         "fourAlpha_twoBeta",
+                                         "oneAlpha_oneBeta_agencyBonus",
+                                         "oneAlpha_twoBeta_agencyBonus",
+                                         "twoAlpha_oneBeta_agencyBonus",
+                                         "twoAlpha_twoBeta_agencyBonus",
+                                         "twoAlphaValenced_oneBeta_agencyBonus",
+                                         "twoAlphaValenced_twoBeta_agencyBonus",
+                                         "fourAlpha_oneBeta_agencyBonus",
+                                         "fourAlpha_twoBeta_agencyBonus"),
+                              labels = c(TeX('$one\\alpha\\_one\\beta'),
+                                TeX('$one\\alpha\\_two\\beta'),
+                                TeX('$twoChoice\\alpha\\_one\\beta'),
+                                TeX('$twoChoice\\alpha\\_two\\beta'),
+                                TeX('$twoValenced\\alpha\\_one\\beta'),
+                                TeX('$twoValenced\\alpha\\_two\\beta'),
+                                TeX('$four\\alpha\\_one\\beta'),
+                                TeX('$four\\alpha\\_two\\beta'),
+                                TeX('$one\\alpha\\_one\\beta$_AB'),
+                                TeX('$one\\alpha\\_two\\beta$_AB'),
+                                TeX('$twoChoice\\alpha\\_one\\beta$_AB'),
+                                TeX('$twoChoice\\alpha\\_two\\beta$_AB'),
+                                TeX('$twoValenced\\alpha\\_one\\beta$_AB'),
+                                TeX('$twoValenced\\alpha\\_two\\beta$_AB'),
+                                TeX('$four\\alpha\\_one\\beta$_AB'),
+                                TeX('$four\\alpha\\_two\\beta$_AB')))
+
+```
+
+```{r AIC confusion matrix, fig.width = 12, fig.height = 8, units = "in"}
+
+aic_confusion_plot <- ggplot(model_recov, aes(x = sim_model, y = RecoveredModel)) +
+    geom_tile(aes(fill = prop)) +
+    geom_text(aes(label=round(prop, 2)), color = "white") +
+    voc_theme() +
+    xlab("Simulated Model") +
+    ylab("Fitted Model") +
+    scale_y_discrete(labels = parse(text = levels(model_recov$RecoveredModel))) +
+    scale_x_discrete(labels = parse(text = levels(model_recov$sim_model))) +
+    scale_fill_continuous(type = "gradient", name = "p(fit model | sim model)") +
+    theme(axis.text.x = element_text(angle = 75, hjust = 1))
+aic_confusion_plot   
+    
+```
+
+```{r AIC inversion matrix, fig.width = 12, fig.height = 8, units = "in"}
+
+#determine the total number of participants best-fit by a given model
+prop_sums <- model_recov %>%
+    group_by(RecoveredModel) %>%
+    summarize(propSum = sum(prop))
+
+temp <- full_join(model_recov, prop_sums, by = c("RecoveredModel"))
+
+#determine the number of participants best-fit by a given model, generated by that model
+temp$inversionProp <- temp$prop / temp$propSum
+
+aic_inversion_plot <- ggplot(temp, aes(x = sim_model, y = RecoveredModel)) +
+    geom_tile(aes(fill = inversionProp)) +
+    geom_text(aes(label=round(inversionProp, 2)), color = "white") +
+    voc_theme() +
+    xlab("Simulated Model") +
+    ylab("Fitted Model") +
+    scale_y_discrete(labels = parse(text = levels(model_recov$RecoveredModel))) +
+    scale_x_discrete(labels = parse(text = levels(model_recov$sim_model))) +
+    scale_fill_continuous(type = "gradient", name = "p(sim model | fit model)") +
+    theme(axis.text.x = element_text(angle = 75, hjust = 1))
+aic_inversion_plot   
+    
+```
+
+```{r combined confusion inversion, fig.width = 24, fig.height = 7.5, units = "in"}
+aic_recov = aic_confusion_plot + aic_inversion_plot
+aic_recov
+```
+
+# Parameter recovery 
+```{r parameter recovery}
+
+sim_params <- read_csv("RL_modeling/output/fourAlpha_twoBeta_agencyBonus_sim_params.csv") %>%
+    rownames_to_column(var = "simID") %>%
+    pivot_longer(cols = alphaChoicePos:agencyBonus,
+                 names_to = "param",
+                 values_to = "sim_val")
+
+
+fit_params <- read_csv("RL_modeling/output/fourAlpha_twoBeta_agencyBonus_fit_params.csv") %>%
+     rownames_to_column(var = "simID") %>%
+      pivot_longer(cols = alphaChoicePos:agencyBonus,
+                 names_to = "param",
+                 values_to = "fit_val")
+
+#combine
+param_recov <- full_join(sim_params, fit_params, by = c("param", "simID"))
+
+param_recov$param <- factor(param_recov$param, 
+                            levels = c("alphaChoicePos",
+                                       "alphaChoiceNeg",
+                                       "alphaCompPos",
+                                       "alphaCompNeg",
+                                       "betaAgency",
+                                       "betaBandit",
+                                       "agencyBonus"),
+                            labels = c(TeX("$\\alpha_{choice_+}$"), 
+                                       TeX("$\\alpha_{choice_-}$"), 
+                                       TeX("$\\alpha_{comp_+}$"), 
+                                       TeX("$\\alpha_{comp_-}$"), 
+                                       TeX("$\\beta_{agency}$"), 
+                                       TeX("$\\beta_{machine}$"),
+                                       "Agency~Bonus"
+                                ))
+
+```
+
+
+```{r parameter recovery plot, fig.height = 8, fig.width = 12}
+
+param_recov_plot <- ggplot(param_recov, aes(x = sim_val, y = fit_val)) +
+    facet_wrap(~param, scales = "free", labeller = label_parsed, nrow = 2) +
+    geom_point(color = color1,  alpha = .3, size = .5) +
+    geom_smooth(method = "lm", color = color2, fill = color2) +
+    stat_cor(aes(label = ..r.label..), label.y.npc="top", label.x.npc = "left", method = "pearson",size= 4) + 
+    xlab("Simulated Value") +
+    ylab("Fitted Value") +
+    voc_theme()
+param_recov_plot  
+
+```

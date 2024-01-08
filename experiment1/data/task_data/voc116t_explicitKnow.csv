@@ -1,0 +1,7 @@
+"subID","trial","bandit","response","trueProb","RT"
+"voc116t",1,"bandit50b",5,5,18.7976
+"voc116t",2,"bandit90",6,9,1.85
+"voc116t",3,"bandit70",5,7,4.3583
+"voc116t",4,"bandit30",3,3,3.1755
+"voc116t",5,"bandit10",6,1,2.1519
+"voc116t",6,"bandit50a",8,5,1.6019
