@@ -1,5 +1,5 @@
 # Sensitivity to the instrumental value of choice increases across development
-Tasks, anonymized data, and analysis code for: *Sensitivity to the instrumental value of choice increases across development*
+Tasks, anonymized data, and analysis code for: [*Sensitivity to the instrumental value of choice increases across development*](https://osf.io/preprints/psyarxiv/exps6)
 
 Please contact katenuss@gmail.com with questions.
 
