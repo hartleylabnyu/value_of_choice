@@ -9,7 +9,7 @@ clear;
 addpath('lik_funs/');
 
 % load data
-data = readtable('../rl_data.csv');
+data = readtable('../data/processed/rl_data.csv');
 
 %remove NaNs
 data = data(~isnan(data.stage_1_choice), :);

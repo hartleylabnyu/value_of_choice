@@ -45,5 +45,7 @@ Raw and processed data is located within the 'data' folder. Data were analyzed i
 
 4. After model-fitting has been conducted, the R markdown file e2_3_voc_RL.Rmd can be run, which reproduces the reinforcement-learning modeling results reported in the manuscript.
 
+5. Finally, in the supplement, we report analyses on both the full set of participants (as was preregistered) and also on a filtered dataset, in which participants who made more than 300 of the same first-stage choices were excluded. The repository contains versions of the regression and RL analysis markdown files that applies this exclusion.
+
 #### Demographics 
 Detailed demographic data is not included in the repository to protect participant confidentiality. 

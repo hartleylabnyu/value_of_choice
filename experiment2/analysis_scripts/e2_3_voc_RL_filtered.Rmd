@@ -1,0 +1,276 @@
+---
+title: "E2 VoC Analyses Part 3: RL Analyses"
+date: 1/8/24
+output:
+    html_document:
+        df_print: 'paged'
+        toc: true
+        toc_float:
+            collapsed: false
+            smooth_scroll: true
+        number_sections: false
+        code_download: true
+        self_contained: true
+---
+
+```{r chunk settings, include = FALSE}
+# set chunk settings
+knitr::opts_chunk$set(echo = FALSE, 
+                      cache = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+knitr::opts_chunk$set(dpi=600)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+```{r load libraries, include = F}
+
+#load libraries
+library(tidyverse)
+library(glue)
+library(afex)
+library(latex2exp)
+
+#load scripts
+source('analysis_scripts/voc_functions.R')
+```
+
+```{r import data}
+# read in participant ages
+participant_ages <- read_csv('data/voc_sub_info.csv') 
+
+# read in learning data
+learning_data <- read_csv('data/processed/learning_data.csv')
+
+# exclude first-stage misses and first-stage RT < 150 ms
+learning_data_filtered <- learning_data %>%
+  filter(stage_1_rt > 150)
+
+#exclude participants who made more than 300 of the same agency decisions
+stage1_decisions <- learning_data_filtered %>%
+  group_by(subject_id) %>%
+  summarize(agency_choices = sum(stage_1_choice == 1)) %>%
+  filter(agency_choices < 299) %>%
+  filter(agency_choices > 15)
+
+participant_ages <- participant_ages %>%
+  filter(subject_id %in% stage1_decisions$subject_id)
+
+## read in aics
+aics_all = read_csv("RL_modeling/output/aics_all_16_models_100iter.csv") %>%
+  rename(subject_id = subID)
+
+# combine with ages
+aics <- inner_join(aics_all, participant_ages, by = 'subject_id') %>%
+  mutate(age_group = case_when(age < 13 ~ "Children",
+                               age > 12.99 & age < 18 ~ "Adolescents",
+                               age > 17.99 ~ "Adults"))
+
+aics$age_group <- factor(aics$age_group, levels = c("Children", "Adolescents", "Adults"))
+         
+
+#pivot longer
+model_results <- pivot_longer(aics, 
+                      cols = oneAlpha_oneBeta:fourAlpha_twoBeta_agencyBonus,
+                      names_to = "model",
+                      values_to = "AIC")
+
+
+model_results$model <- factor(model_results$model, 
+                              levels = c("oneAlpha_oneBeta",
+                                         "oneAlpha_twoBeta",
+                                         "twoAlpha_oneBeta",
+                                         "twoAlpha_twoBeta",
+                                         "twoAlphaValenced_oneBeta",
+                                         "twoAlphaValenced_twoBeta",
+                                         "fourAlpha_oneBeta",
+                                         "fourAlpha_twoBeta",
+                                         "oneAlpha_oneBeta_agencyBonus",
+                                         "oneAlpha_twoBeta_agencyBonus",
+                                         "twoAlpha_oneBeta_agencyBonus",
+                                         "twoAlpha_twoBeta_agencyBonus",
+                                         "twoAlphaValenced_oneBeta_agencyBonus",
+                                         "twoAlphaValenced_twoBeta_agencyBonus",
+                                         "fourAlpha_oneBeta_agencyBonus",
+                                         "fourAlpha_twoBeta_agencyBonus"))
+model_results <- model_results %>%
+  mutate(agencyBonus = case_when(str_detect(model, "agency") ~ "With Agency Bonus",
+                                 !str_detect(model, "agency") ~ "No Agency Bonus"),
+         shortName = str_remove(model, '_agencyBonus'))
+
+model_results$shortName <- factor(model_results$shortName,
+                                  levels = c("oneAlpha_oneBeta",
+                                             "oneAlpha_twoBeta",
+                                             "twoAlpha_oneBeta",
+                                             "twoAlpha_twoBeta",
+                                             "twoAlphaValenced_oneBeta",
+                                             "twoAlphaValenced_twoBeta",
+                                             "fourAlpha_oneBeta",
+                                             "fourAlpha_twoBeta"))
+```
+
+#  AIC average by age group 
+```{r plot AIC by age group, fig.width = 8, fig.height = 5, units = "in"}
+#summarize
+model_summary <- model_results %>%
+  group_by(age_group, shortName, agencyBonus) %>%
+  summarize(mean_aic = mean(AIC))
+
+## Plot the results by age group 
+AIC_age_plot <- ggplot(model_summary, aes(x = age_group, y = mean_aic, fill = shortName))+
+  facet_wrap(~agencyBonus) +
+  geom_bar(stat = "identity", position = "dodge", color = "black") +
+  scale_fill_manual(name = "Model",
+                    values = c(color8, color1, color2, color3, color4, color5, color6, color7, color1),
+                    labels =  c(TeX('$one\\alpha\\_one\\beta'),
+                                TeX('$one\\alpha\\_two\\beta'),
+                                TeX('$twoChoice\\alpha\\_one\\beta'),
+                                TeX('$twoChoice\\alpha\\_two\\beta'),
+                                TeX('$twoValenced\\alpha\\_one\\beta'),
+                                TeX('$twoValenced\\alpha\\_two\\beta'),
+                                TeX('$four\\alpha\\_one\\beta'),
+                                TeX('$four\\alpha\\_two\\beta'))) + 
+  coord_cartesian(ylim = c(350, 650)) +
+  ylab("Mean AIC") +
+  xlab("") +
+  voc_theme() +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+AIC_age_plot
+```
+
+
+#  Examine age-related change in parameter estimates from models
+```{r load parameters from winning model}
+model_params <- read_csv("RL_modeling/output/model_fits_real_data/fourAlpha_twoBeta_agencyBonus.csv",
+                         col_names = c("negLL",
+                                       "logPost",
+                                       "AIC",
+                                       "BIC",
+                                       "alphaPosChoice",
+                                       "alphaNegChoice",
+                                       "alphaPosComp",
+                                       "alphaNegComp",
+                                       "betaAgency",
+                                       "betaMachine",
+                                       "agencyBonus")) 
+
+#add sub ID and information
+subject_id <- aics_all %>% select(subject_id) %>% unique()
+model_params <- bind_cols(subject_id, model_params)
+model_params <- inner_join(participant_ages, model_params, by = c("subject_id"))
+
+```
+
+
+# Run regressions between model parameters and age
+```{r parameter regressions}
+model_params$LL <- model_params$negLL * -1
+
+# Log likelihood
+summary(lm(LL ~ age, data = model_params))
+# not significant
+
+# Alpha Pos Choice
+summary(lm(alphaPosChoice ~ age, data = model_params))
+#not significant
+
+# Alpha Neg Choice
+summary(lm(alphaNegChoice ~ age, data = model_params))
+# significant
+
+# Alpha Pos Comp
+summary(lm(alphaPosComp ~ age, data = model_params))
+#not significant
+
+# Alpha Neg Comp
+summary(lm(alphaNegComp ~ age, data = model_params))
+#not significant
+
+# Beta Agency
+summary(lm(betaAgency ~ age, data = model_params))
+# significant
+
+# Beta Bandit
+summary(lm(betaMachine ~ age, data = model_params))
+# not significant
+
+# agency bonus
+summary(lm(agencyBonus ~ age, data = model_params))
+# not significant
+
+```
+
+# Learning rate model
+```{r learning rate regression}
+## Learning rate model
+learning_rates <- model_params %>%
+  pivot_longer(cols = c(alphaPosChoice:alphaNegComp),
+               names_to = "learningRate",
+               values_to = "estimate") %>%
+  select(subject_id, age, learningRate, estimate) %>%
+  unique() %>%
+  mutate(valence = case_when(str_detect(learningRate, "Pos") ~ "Positive",
+                             str_detect(learningRate, "Neg") ~ "Negative"),
+         agency = case_when(str_detect(learningRate, "Choice") ~ "Choice",
+                            str_detect(learningRate, "Comp") ~ "Comp"))
+
+learning_rates$age_z <- scale_this(learning_rates$age)
+
+learning_rate_model <- mixed(estimate ~ age_z * valence * agency + (1|subject_id),
+                             data = learning_rates,
+                             method = "S")
+learning_rate_model
+summary(learning_rate_model)
+# main effect of age
+# main effect of valence
+# valence x agency interaction
+
+
+#t test between alpha pos choice and alpha neg choice
+t.test(model_params$alphaPosChoice, model_params$alphaNegChoice, paired = T)
+#significant
+
+#t test between alpha pos comp and alpha neg comp
+t.test(model_params$alphaPosComp, model_params$alphaNegComp, paired = T)
+#not significant
+
+```
+
+
+# Plot relations between model parameters and age
+```{r age parameter plot, fig.width = 7, fig.height = 4, units = "in"}
+
+params_long <- model_params %>%
+  pivot_longer(names_to = "param",
+               values_to = "estimate",
+               cols = c(alphaPosChoice:agencyBonus)) 
+
+params_long$param <- factor(params_long$param, 
+                            levels = c("alphaPosChoice",
+                                       "alphaNegChoice",
+                                       "alphaPosComp",
+                                       "alphaNegComp",
+                                       "betaAgency",
+                                       "betaMachine",
+                                       "agencyBonus"),
+                            labels = c(TeX("$\\alpha_{choice_+}$"), 
+                                       TeX("$\\alpha_{choice_-}$"), 
+                                       TeX("$\\alpha_{comp_+}$"), 
+                                       TeX("$\\alpha_{comp_-}$"), 
+                                       TeX("$\\beta_{agency}$"), 
+                                       TeX("$\\beta_{machine}$"),
+                                       "Agency~Bonus"
+                            ))
+
+params_plot <- ggplot(params_long, aes(x = age, y = estimate, color = param)) +
+  facet_wrap(~param, scale = "free", labeller = label_parsed, nrow = 2) +
+  geom_point() +
+  geom_smooth(method = "lm", aes(fill = param)) +
+  ylab("Parameter Estimate") +
+  xlab("Age") +
+  voc_theme() +
+  theme(legend.position = "none")
+params_plot
+```
+
+

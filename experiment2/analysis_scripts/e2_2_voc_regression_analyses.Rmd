@@ -86,6 +86,7 @@ sub_info <- learning_data_filtered %>%
             min_age = min(age, na.rm = T),
             max_age = max(age, na.rm = T),
             mean_age = mean(age, na.rm = T),
+            sd_age = sd(age, na.rm = T),
             n_female = sum(gender == 'Female'),
             n_male = sum(gender == 'Male'),
             n_other = sum(gender == 'Other'))
@@ -118,6 +119,7 @@ agency_model <- mixed(stage_1_choice ~ age_z * voc_z * condition_trial + (voc_z 
 
 #show model results
 agency_model
+summary(agency_model)
 ```
 
 ## Plot: Sensitivity to the value of choice
@@ -242,6 +244,7 @@ machine_model <- mixed(stage_2_acc ~ age_z * context * condition_trial + (contex
 
 #show model results
 machine_model
+summary(machine_model)
 ```
 
 ## Plot: Proportion optimal machine selections across age groups and trials
@@ -317,6 +320,7 @@ explicitKnow_errorbyTrueProbAge.mixed <- mixed(error ~ zTrueProb*zAge + (1|subje
                                                data = explicitKnow.filtered,
                                                method = "S") 
 explicitKnow_errorbyTrueProbAge.mixed
+summary(explicitKnow_errorbyTrueProbAge.mixed)
 ```
 
 ## Plot: Explicit reward knowledge
@@ -331,13 +335,13 @@ explicitKnow$age_group <- factor(explicitKnow$age_group,
                                   levels = c("Children", "Adolescents", "Adults"))
 
 # plot response by bandit
-explicitKnow %>% 
+explicitKnow %>% drop_na() %>%
     ggplot(., aes(x=factor(true_prob), y=response, fill=age_group)) +
     geom_boxplot() +
     scale_fill_manual(values = c(color1, color2, color3), name = "Age Group") +
     ylab("Reported Reward Probability") +
     xlab("True Reward Probability") +
-    scale_x_discrete(labels = c("10%", "30%", "50%", "50%", "70%", "90%")) +
+    scale_x_discrete(labels = c("10%", "30%", "50%", "70%", "90%")) +
     scale_y_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), 
                      labels = c("10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%")) +
     voc_theme()
