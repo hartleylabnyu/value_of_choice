@@ -121,7 +121,7 @@ agency_model
 ```
 
 ## Plot: Sensitivity to the value of choice
-```{r agency plot}
+```{r voc plot, fig.height = 4, fig.width = 7, unit = "in"}
 ## PLOT ##
 agency_sub_means <- agency_model_data %>% 
   mutate(task_half = case_when(trial < 158 ~ "First Half of Task",
@@ -149,7 +149,7 @@ agency_plot
 ```
 
 
-## Plot: Sensitivity to value of control with continuous age 
+## Plot: Sensitivity to value of choice with continuous age 
 ```{r voc plot continuous age, fig.height = 3.9, fig.width = 3, unit = "in"}
 
 #run model without age to get random effects for each participant
@@ -245,7 +245,7 @@ machine_model
 ```
 
 ## Plot: Proportion optimal machine selections across age groups and trials
-```{r machine selection plot}
+```{r plot bandit choices across trials, width = 7, height = 4, unit = "in"}
 
 ## PLOT ##
 machine_selection_sub_means <- machine_model_data %>%
@@ -265,16 +265,16 @@ machine_selection_plot <- ggplot(machine_selection_means, aes(x=block, y=mean_ac
   geom_hline(yintercept = .5, linetype="dashed") +
   ylab("Proportion Optimal Machine Selections") +
   xlab("Block") +
-  scale_x_continuous(breaks = c(1:15)) +
+  scale_x_continuous(breaks = c(4, 8, 12)) +
   scale_fill_manual(name="Context",
                     labels=c("90/10",
                              "70/30"),
-                    values=c("#0077b6", "#03045e"), 
+                    values=c(color1, color3), 
                     guide = guide_legend(reverse=TRUE)) +
   scale_color_manual(name="Context",
                      labels=c("90/10",
                               "70/30"),
-                     values=c("#0077b6", "#03045e"),
+                     values=c(color1, color3),
                      guide = guide_legend(reverse=TRUE)) +
   voc_theme() +
   theme(strip.text = element_text(size=12))
@@ -289,7 +289,7 @@ machine_selection_plot
 
 # Read in data
 explicitKnow <- read_csv('data/processed/explicit_data.csv') 
-explicitKnow$subject_id <- factor(explicitKnow$subject_id)
+#explicitKnow$subject_id <- factor(explicitKnow$subject_id)
 
 #combine with age
 explicitKnow <- full_join(explicitKnow, participant_ages, by = c("subject_id"))
@@ -338,7 +338,7 @@ explicitKnow %>%
     ylab("Reported Reward Probability") +
     xlab("True Reward Probability") +
     scale_x_discrete(labels = c("10%", "30%", "50%", "50%", "70%", "90%")) +
-    scale_y_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9), 
-                     labels = c("10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%")) +
+    scale_y_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), 
+                     labels = c("10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%")) +
     voc_theme()
 ```

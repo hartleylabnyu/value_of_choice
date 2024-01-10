@@ -53,7 +53,7 @@ data_all <- list.files(path = data_dir,
 # Compute quality metrics
 # 1. Browser interactions < 20
 # 2. Missed first-stage choices < 31 trials
-# 3. First-stage RTs < 150 ms < 21 trials
+# 3. First-stage RTs < 150 ms < 31 trials
 
 browser_summary <- data_all %>%
   group_by(subject_id) %>%
@@ -88,6 +88,7 @@ write_csv(sub_summary, 'data/processed/data_quality.csv')
 exclusion_stats <- sub_summary %>%
   group_by(bad_data1, bad_data2) %>%
   summarize(N = n())
+exclusion_stats
 
 # Filter bad subjects out of data
 good_subs <- sub_summary %>%
