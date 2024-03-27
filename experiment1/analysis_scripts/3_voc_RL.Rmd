@@ -1,6 +1,6 @@
 ---
 title: "VoC Analyses Part 3: Analyze Reinforcement-Learning Results"
-date: 1/8/24
+date: 3/27/24
 output:
     html_document:
         df_print: 'paged'
@@ -23,11 +23,10 @@ knitr::opts_chunk$set(dpi=600)
 knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 ```
 
-# Load packages 
 ```{r load packages, include = F}
 
 # list all packages required for the analysis
-list.of.packages <- c("tidyverse", "latex2exp", "afex")
+list.of.packages <- c("tidyverse", "latex2exp", "afex", "sjPlot")
 
 # check if all packages are installed, if not, install them.
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
@@ -70,21 +69,27 @@ scale_this <- function(x){
 
 ```
 
-## Load data  
 ```{r, load data}
 #load data
 aics = read_csv("RL_modeling/output/aics_all_16_models_100iter.csv")
+bics = read_csv("RL_modeling/output/bics_all_16_models_100iter.csv")
 ```
 
-```{r pivot AIC data longer}
+```{r pivot data longer}
 aics1 <- pivot_longer(aics, 
                 cols = oneAlpha_oneBeta:fourAlpha_twoBeta_agencyBonus,
                 names_to = "model",
                 values_to = "AIC")
+
+bics1 <- pivot_longer(bics, 
+                cols = oneAlpha_oneBeta:fourAlpha_twoBeta_agencyBonus,
+                names_to = "model",
+                values_to = "BIC")
 ```
 
 
-#  AIC average by age group 
+#  AIC analyses
+## Average AIC by age group
 ```{r plot AIC by age group, fig.width = 8, fig.height = 5, units = "in"}
 
 # Add id and other demographic info
@@ -156,6 +161,7 @@ AIC_age_plot <- ggplot(model_summary, aes(x = age_group, y = meanAIC, fill = sho
 AIC_age_plot
 ```
 
+## Average AIC 
 ```{r aic overall plot, fig.width = 6, fig.height = 4, units = "in"}
 model_summary_overall <- model_results %>%
     group_by(model, shortName, agencyBonus) %>%
@@ -192,6 +198,7 @@ AIC_plot
 
 ```
 
+## AIC difference from best model
 ```{r aic overall difference plot, fig.width = 4, fig.height = 5, units = "in"}
 #get minimum AIC
 minAIC = min(model_summary_overall$meanAIC)
@@ -232,7 +239,8 @@ AIC_difference_plot
 
 ```
 
-#  Examine age-related change in parameter estimates from models
+
+#  Age-related change in parameter estimates from models
 ```{r parameter estimates}
 
 # load all parameters from each model
@@ -250,7 +258,7 @@ model_params <- read_csv("RL_modeling/output/model_fits_real_data/fourAlpha_twoB
                                        "agencyBonus"))
 
 #add sub ID and information
-subID <- model_results %>% select(subID) %>% unique()
+subID <- read_csv('RL_modeling/output/subIDs.csv')
 model_params <- bind_cols(subID, model_params)
 model_params <- full_join(sub_info, model_params, by = c("subID"))
 ```
@@ -293,41 +301,6 @@ summary(lm(betaMachine ~ age, data = model_params))
 summary(lm(agencyBonus ~ age, data = model_params))
 #not significant
 ```
-
-
-# Learning rate model
-```{r learning rate regression}
-learning_rates <- model_params %>%
-    pivot_longer(cols = c(alphaPosChoice:alphaNegComp),
-                 names_to = "learningRate",
-                 values_to = "estimate") %>%
-    select(subID, age, age_group, learningRate, estimate) %>%
-    unique() %>%
-    mutate(valence = case_when(str_detect(learningRate, "Pos") ~ "Positive",
-                               str_detect(learningRate, "Neg") ~ "Negative"),
-           agency = case_when(str_detect(learningRate, "Choice") ~ "Choice",
-                              str_detect(learningRate, "Comp") ~ "Comp"))
-                               
-learning_rates$ageZ <- scale_this(learning_rates$age)
-
-learning_rate_model <- mixed(estimate ~ ageZ * valence * agency + (1|subID),
-                             data = learning_rates,
-                             method = "S")
-learning_rate_model
-summary(learning_rate_model)
-# valence x agency interaction
-# marginal valence x agency x age interaction
-
-#t test between alpha pos choice and alpha neg choice
-t.test(model_params$alphaPosChoice, model_params$alphaNegChoice, paired = T)
-#significant
-
-#t test between alpha pos comp and alpha neg comp
-t.test(model_params$alphaPosComp, model_params$alphaNegComp, paired = T)
-#not significant
-
-```
-
 
 # Plot relations between model parameters and age
 ```{r age parameter plot, fig.width = 7, fig.height = 4, units = "in"}
@@ -375,6 +348,220 @@ param_summary <- params_long %>%
 param_summary
 
 ```
+
+# Mixed-effects beta analysis
+```{r beta regression}
+betas <- model_params %>%
+    pivot_longer(cols = c(betaAgency, betaMachine),
+                 names_to = "betaType",
+                 values_to = "estimate") %>%
+    select(subID, age, age_group, betaType, estimate) %>%
+    unique() 
+                               
+betas$ageZ <- scale_this(betas$age)
+
+beta_model <- mixed(estimate ~ ageZ * betaType + (1|subID),
+                             data = betas,
+                             method = "S")
+beta_model
+summary(beta_model)
+```
+
+```{r beta print model stats}
+
+beta_model.lmer <- mixed(estimate ~ ageZ * betaType + (1|subID),
+                             data = betas,
+                             method = "S",
+                             return = "merMod")
+
+tab_model(beta_model.lmer, 
+          pred.labels = c("intercept", "age", "decision stage", "age x decision stage"),
+          transform = NULL,
+          show.est = T, 
+          show.se = T, 
+          show.stat = T,
+          show.ci = F,
+          show.re.var = F,
+          show.icc = F,
+          show.ngroups = F,
+          show.obs = F,
+          show.r2 = F,
+          string.se = "SE",
+          emph.p = F,
+          string.pred = "Predictor",
+          title = "",
+          dv.labels = "")
+```
+
+
+## Beta plot
+```{r beta plot}
+
+beta_means <- betas %>%
+    group_by(age_group, betaType) %>%
+    summarize(meanBeta = mean(estimate),
+              seBeta = sd(estimate) / sqrt(n()))
+
+beta_plot <- ggplot(beta_means, aes(x = betaType, y = meanBeta, fill = age_group)) +
+    geom_bar(color = 'black', stat = "identity", position = "dodge") + 
+    geom_errorbar(color = "black", aes(ymin = meanBeta - seBeta, ymax = meanBeta + seBeta), width = .1,
+                  position = position_dodge(width = .9)) +
+    scale_fill_manual(values = c(color1, color2, color3), name = "Age Group") +
+    ylab("Mean Beta") +
+    xlab("Decision Stage") +
+    scale_x_discrete(labels = c("Agency Decision", "Machine Decision")) +
+    voc_theme()
+beta_plot 
+
+
+beta_plot_continuous <- ggplot(betas, aes(color = betaType, y = estimate, x = age)) +
+    geom_point() +
+    geom_smooth(method = "lm", aes(fill = betaType, color = betaType)) +
+    scale_color_manual(values = c(color1, color2), name = "Beta Parameter", labels = c("Agency Decision", "Machine Decision")) +
+    scale_fill_manual(values = c(color1, color2), name = "Beta Parameter", labels = c("Agency Decision", "Machine Decision")) +
+    ylab("Beta Estimate") +
+    xlab("Age") +
+    voc_theme()
+beta_plot_continuous
+```
+
+
+# Mixed-effects learning rate analysis
+```{r learning rate regression}
+learning_rates <- model_params %>%
+    pivot_longer(cols = c(alphaPosChoice:alphaNegComp),
+                 names_to = "learningRate",
+                 values_to = "estimate") %>%
+    select(subID, age, age_group, learningRate, estimate) %>%
+    unique() %>%
+    mutate(valence = case_when(str_detect(learningRate, "Pos") ~ "Positive",
+                               str_detect(learningRate, "Neg") ~ "Negative"),
+           agency = case_when(str_detect(learningRate, "Choice") ~ "Choice",
+                              str_detect(learningRate, "Comp") ~ "Comp"))
+                               
+learning_rates$ageZ <- scale_this(learning_rates$age)
+
+learning_rate_model <- mixed(estimate ~ ageZ * valence * agency + (1|subID),
+                             data = learning_rates,
+                             method = "S")
+learning_rate_model
+summary(learning_rate_model)
+# valence x agency interaction
+# marginal valence x agency x age interaction
+
+#t test between alpha pos choice and alpha neg choice
+t.test(model_params$alphaPosChoice, model_params$alphaNegChoice, paired = T)
+#significant
+
+#t test between alpha pos comp and alpha neg comp
+t.test(model_params$alphaPosComp, model_params$alphaNegComp, paired = T)
+#not significant
+
+```
+
+```{r learning rate print model stats}
+
+learning_rate_model.lmer <- mixed(estimate ~ ageZ * valence * agency + (1|subID),
+                             data = learning_rates,
+                             method = "S",
+                             return = "merMod")
+
+tab_model(learning_rate_model.lmer, 
+          pred.labels = c("intercept", "age", "valence", "agency", "age x valence", "age x agency", "valence x agency", "age x valence x agency"),
+          transform = NULL,
+          show.est = T, 
+          show.se = T, 
+          show.stat = T,
+          show.ci = F,
+          show.re.var = F,
+          show.icc = F,
+          show.ngroups = F,
+          show.obs = F,
+          show.r2 = F,
+          string.se = "SE",
+          emph.p = F,
+          string.pred = "Predictor",
+          title = "",
+          dv.labels = "")
+```
+
+## Learning rate plot
+```{r learning rate plot}
+
+learning_rate_means <- learning_rates %>%
+    group_by(agency, valence) %>%
+    summarize(meanLR = mean(estimate),
+              seLR = sd(estimate) / sqrt(n()))
+
+learning_rate_plot <- ggplot(learning_rate_means, aes(x = agency, y = meanLR, fill = valence)) +
+    geom_bar(color = 'black', stat = "identity", position = "dodge") + 
+    geom_errorbar(color = "black", aes(ymin = meanLR - seLR, ymax = meanLR + seLR), width = .1,
+                  position = position_dodge(width = .9)) +
+    scale_fill_manual(values = c(color1, color2), name = "Valence") +
+    ylab("Mean Learning Rate") +
+    xlab("Agency") +
+    scale_x_discrete(labels = c("Participant Choice", "Computer Choice")) +
+    voc_theme()
+learning_rate_plot 
+```
+
+
+
+# Relation between parameter estimates and 'model-free' regressions
+```{r relations between random effects and model parameters - extract REs}
+
+# Read in data
+banditTask <- read_csv('data/processed/bandit_task.csv') 
+
+#combine with participant age
+banditTask <- full_join(banditTask, sub_info, by = c("subID"))
+
+#scale voc
+banditTask$zVoC <- scale_this(banditTask$voc)
+banditTask$zTrialOfCond <- scale_this(banditTask$trialOfCond)
+banditTask$zAge <- scale_this(banditTask$age)
+
+# predict agency choice from utility of control, trial, linear age
+agency_byVOCTrialAge.mixed = mixed(agency ~ zVoC * zTrialOfCond + (zVoC * zTrialOfCond|subID), 
+                        data = banditTask, 
+                        family = binomial, 
+                        method = "LRT", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=1e6)),
+                        return = "merMod") 
+
+#get random effects
+voc_REs <- ranef(agency_byVOCTrialAge.mixed)$subID %>%
+    rownames_to_column(var = "subID")
+
+#combine with RL estimates
+voc_REs_RL <- full_join(voc_REs, model_params, by = 'subID')
+
+```
+
+```{r run regressions REs and model parameters}
+#run regressions
+
+#agency bonus
+voc_intercept_agencyBonus.lm <- lm(`(Intercept)` ~ agencyBonus, data = voc_REs_RL)
+summary(voc_intercept_agencyBonus.lm)
+
+#beta agency
+voc_slope_betaAgency.lm <- lm(zVoC ~ betaAgency, data = voc_REs_RL)
+summary(voc_slope_betaAgency.lm)
+
+#beta agency controlling for age
+voc_slope_betaAgencyAge.lm <- lm(zVoC ~ betaAgency + age, data = voc_REs_RL)
+summary(voc_slope_betaAgencyAge.lm)
+
+#beta agency controlling for beta machine
+voc_slope_betaMachine.lm <- lm(zVoC ~ betaAgency + betaMachine, data = voc_REs_RL)
+summary(voc_slope_betaMachine.lm)
+
+```
+
+
+
+
+
 
 
 # Questionnaire relations

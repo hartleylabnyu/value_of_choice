@@ -1,6 +1,6 @@
 ---
 title: "VoC Analyses Part 5: Posterior Predictive Checks"
-date: 1/8/24
+date: 3/27/24
 output:
     html_document:
         df_print: 'paged'
@@ -54,7 +54,6 @@ voc_theme <- function () {
 
 ```
 
-## Load simulated data
 ```{r load data}
 sim_data <- read_csv("RL_modeling/output/posterior_predictive/simData_subParams_fourAlpha_twoBeta_agencyBonus.csv") %>%
     rename(tokenOffer = offer,
@@ -233,7 +232,7 @@ VoC_plot <- ggplot(VoC_plot_means, aes(x = voc, y = meanAgency, color = age_grou
     geom_errorbar(aes(color = age_group, ymin = meanAgency - seAgency, ymax = meanAgency + seAgency), width = .1) + 
     geom_line(aes(group = age_group)) +
     voc_theme() + 
-    scale_color_manual(values=c("#84347C", "#B40424", "#EB6D1E"), name = "Age Group") +
+    scale_color_manual(values=c("#702963", "#c00000", "#ffae42"), name = "Age Group") +
     xlab("Value of Choice (VoC)") +
     ylab("Proportion Agency Choices") +
     geom_hline(yintercept = .5, linetype = "dashed") +
@@ -276,7 +275,7 @@ VoC_error_plot <- ggplot(VoC_mean_error, aes(x = voc, y = meanError, color = age
     geom_errorbar(aes(color = age_group, ymin = meanError - seError, ymax = meanError + seError), width = .1) + 
     geom_line(aes(group = age_group)) +
     voc_theme() + 
-    scale_color_manual(values=c("#84347C", "#B40424", "#EB6D1E"), name = "Age Group") +
+    scale_color_manual(values=c("#702963", "#c00000", "#ffae42"), name = "Age Group") +
     xlab("Value of Choice (VoC)") +
     ylab("Mean Error in Model Predictions") +
     geom_hline(yintercept = 0, linetype = "dashed") +

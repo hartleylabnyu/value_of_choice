@@ -5,3 +5,5 @@
 .Rproj
 **/*_cache/
 **/*_files/
+experiment1/analysis_scripts/3a*
+experiment1/analysis_scripts/3a*/

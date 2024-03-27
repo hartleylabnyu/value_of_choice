@@ -22,6 +22,7 @@ filename = 'output/all_16_models_100iter';
 
 % Determine number of iterations - set to 100
 niter = 100;
+
 %specify list of models
 models = {'oneAlpha_oneBeta', 'oneAlpha_twoBeta', 'twoAlpha_oneBeta', 'twoAlpha_twoBeta', ...
     'twoAlphaValenced_oneBeta', 'twoAlphaValenced_twoBeta', 'fourAlpha_oneBeta', 'fourAlpha_twoBeta', ...
@@ -214,4 +215,5 @@ end
 
 %Save fitting results
 save(filename, 'model_fits');
+
 

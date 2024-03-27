@@ -4,7 +4,7 @@
 clear all;
 
 %% Load data %%
-load('all_model_fits_spaced.mat');
+load('sim_model_fits/all_model_fits_spaced.mat');
 num_models = 16;
 
 %% Extract AICs for each data set and each model %%

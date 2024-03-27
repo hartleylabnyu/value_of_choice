@@ -1,6 +1,6 @@
 ---
 title: "VoC Analyses Part 4: Recoverability"
-date: 1/8/24
+date: 3/27/24
 output:
     html_document:
         df_print: 'paged'
@@ -184,6 +184,7 @@ aic_recov = aic_confusion_plot + aic_inversion_plot
 aic_recov
 ```
 
+
 # Parameter recovery 
 ```{r parameter recovery}
 
@@ -233,6 +234,62 @@ param_recov_plot <- ggplot(param_recov, aes(x = sim_val, y = fit_val)) +
     xlab("Simulated Value") +
     ylab("Fitted Value") +
     voc_theme()
+param_recov_plot  
+
+```
+
+
+## Filter to only include agency bonus > .3
+```{r parameter recovery filtered}
+
+sim_params <- read_csv("RL_modeling/output/fourAlpha_twoBeta_agencyBonus_sim_params.csv") %>%
+    rownames_to_column(var = "simID") %>%
+    filter(agencyBonus > .3) %>%
+    pivot_longer(cols = alphaChoicePos:agencyBonus,
+                 names_to = "param",
+                 values_to = "sim_val")
+
+
+fit_params <- read_csv("RL_modeling/output/fourAlpha_twoBeta_agencyBonus_fit_params.csv") %>%
+     rownames_to_column(var = "simID") %>%
+      pivot_longer(cols = alphaChoicePos:agencyBonus,
+                 names_to = "param",
+                 values_to = "fit_val")
+
+#combine
+param_recov <- inner_join(sim_params, fit_params, by = c("param", "simID"))
+
+param_recov$param <- factor(param_recov$param, 
+                            levels = c("alphaChoicePos",
+                                       "alphaChoiceNeg",
+                                       "alphaCompPos",
+                                       "alphaCompNeg",
+                                       "betaAgency",
+                                       "betaBandit",
+                                       "agencyBonus"),
+                            labels = c(TeX("$\\alpha_{choice_+}$"), 
+                                       TeX("$\\alpha_{choice_-}$"), 
+                                       TeX("$\\alpha_{comp_+}$"), 
+                                       TeX("$\\alpha_{comp_-}$"), 
+                                       TeX("$\\beta_{agency}$"), 
+                                       TeX("$\\beta_{machine}$"),
+                                       "Agency~Bonus"
+                                ))
+
+```
+
+
+```{r parameter recovery filtered plot, fig.height = 8, fig.width = 12}
+
+param_recov_plot <- ggplot(param_recov, aes(x = sim_val, y = fit_val)) +
+    facet_wrap(~param, scales = "free", labeller = label_parsed, nrow = 2) +
+    geom_point(color = color1,  alpha = .3, size = .5) +
+    geom_smooth(method = "lm", color = color2, fill = color2) +
+    stat_cor(aes(label = ..r.label..), label.y.npc="top", label.x.npc = "left", method = "pearson",size= 4) + 
+    xlab("Simulated Value") +
+    ylab("Fitted Value") +
+    voc_theme() +
+    ggtitle('Agency Bonus > .3')
 param_recov_plot  
 
 ```

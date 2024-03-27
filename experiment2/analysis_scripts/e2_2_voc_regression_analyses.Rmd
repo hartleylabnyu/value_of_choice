@@ -1,6 +1,6 @@
 ---
 title: "E2 VoC Analyses Part 2: Regression Analyses"
-date: 1/8/24
+date: 3/27/24
 output:
     html_document:
         df_print: 'paged'
@@ -29,6 +29,7 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 library(tidyverse)
 library(glue)
 library(afex)
+library(sjPlot)
 
 #load scripts
 source('analysis_scripts/voc_functions.R')
@@ -110,7 +111,7 @@ agency_model_data$condition_trial <- scale_this(agency_model_data$condition_tria
 agency_model_data$age_z <- scale_this(agency_model_data$age)
 
 #run model
-agency_model <- mixed(stage_1_choice ~ age_z * voc_z * condition_trial + (voc_z * condition_trial || subject_id),
+agency_model <- mixed(stage_1_choice ~  voc_z * condition_trial * age_z + (voc_z * condition_trial || subject_id),
                       data = agency_model_data,
                       family = "binomial",
                       method = "LRT",
@@ -120,6 +121,36 @@ agency_model <- mixed(stage_1_choice ~ age_z * voc_z * condition_trial + (voc_z 
 #show model results
 agency_model
 summary(agency_model)
+```
+
+
+```{r agency model print model stats}
+
+agency_model.glmer =  mixed(stage_1_choice ~  voc_z * condition_trial * age_z + (voc_z * condition_trial || subject_id),
+                      data = agency_model_data,
+                      family = "binomial",
+                      method = "LRT",
+                      expand_re = T,
+                      control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e6)),
+                      return = "merMod")
+
+tab_model(agency_model.glmer, 
+          pred.labels = c("intercept", "VoC", "trial", "age", "VoC x trial", "VoC x age", "trial x age", "VoC x trial x age"),
+          transform = NULL,
+          show.est = T, 
+          show.se = T, 
+          show.stat = T,
+          show.ci = F,
+          show.re.var = F,
+          show.icc = F,
+          show.ngroups = F,
+          show.obs = F,
+          show.r2 = F,
+          string.se = "SE",
+          emph.p = F,
+          string.pred = "Predictor",
+          title = "",
+          dv.labels = "")
 ```
 
 ## Plot: Sensitivity to the value of choice
@@ -142,7 +173,7 @@ agency_plot <- ggplot(agency_means, aes(x = voc, y = mean_agency, color = age_gr
   geom_errorbar(aes(ymin = mean_agency - se_agency, ymax = mean_agency + se_agency), width = .1) + 
   geom_line() +
   voc_theme() + 
-  scale_color_manual(values=c("#84347C", "#B40424", "#EB6D1E"), name = "Age Group") +
+    scale_color_manual(values=c("#702963", "#c00000", "#ffae42"), name = "Age Group") +
   xlab("Value of Choice (VoC)") +
   ylab("Proportion Agency Choices") +
   geom_hline(yintercept = .5, linetype = "dashed") +
@@ -180,8 +211,8 @@ VoC_subEffects <- agency_model_data %>%
 
 #plot age by VoC effect
 VoC_plot_continuousAge <- ggplot(VoC_subEffects, aes(x = age, y = zVoCFull)) +
-    geom_point(color = "#EB6D1E") + 
-    geom_smooth(method = "lm", color = "#84347C", fill = "#84347C") +
+    geom_point(color = "black") + 
+    geom_smooth(method = "lm", color = "black", fill = "black") +
     voc_theme() + 
     xlab("Age") +
     ylab("VoC Effect") 
@@ -189,8 +220,8 @@ VoC_plot_continuousAge
 
 #plot age by VoC x trial effect
 VoC_plot_continuousAgeTrial <- ggplot(VoC_subEffects, aes(x = age, y = intFull)) +
-    geom_point(color = "#EB6D1E") + 
-    geom_smooth(method = "lm", color = "#84347C", fill = "#84347C") +
+    geom_point(color = "black") + 
+    geom_smooth(method = "lm", color = "black", fill = "black") +
     voc_theme() + 
     xlab("Age") +
     ylab("VoC x Trial Effect") 
@@ -216,6 +247,115 @@ VoC_zero_means
 ```
 
 
+## Agency decision reaction times
+```{r agency RT data processing}
+
+#compute RT
+learning_data_filtered$agencyRT <- learning_data_filtered$stage_1_rt / 1000
+
+#how many RTs faster than 100 ms?
+fastRTs <- learning_data_filtered %>%
+    filter(agencyRT < .1) %>%
+    nrow()
+
+#0 excluded
+
+slowRTs <- learning_data_filtered %>%
+    filter(agencyRT > 30) %>%
+    nrow()
+
+#0 excluded
+
+banditTask.RT.data <- learning_data_filtered %>%
+    filter(agencyRT > .1) %>%
+    filter(agencyRT < 30) %>%
+    mutate(agencyLogRT = log(agencyRT))
+```
+
+## Model: Agency RTs by VoC
+```{r voc RT model}
+
+#compute abs(voc) variable
+banditTask.RT.data$absVoC <- abs(banditTask.RT.data$voc)
+
+#scale variables
+banditTask.RT.data$zAge <- scale(banditTask.RT.data$age)
+banditTask.RT.data$zVoC <- scale(banditTask.RT.data$voc)
+banditTask.RT.data$zAbsVoC <- scale(banditTask.RT.data$absVoC)
+banditTask.RT.data$zTrialOfCond <- scale(banditTask.RT.data$condition_trial)
+
+agency.RT.model <- mixed(agencyLogRT ~ zAge * zAbsVoC * zTrialOfCond + (zAbsVoC * zTrialOfCond | subject_id),
+                         data = banditTask.RT.data,
+                         method = "S", 
+                         control=lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e6)))
+
+agency.RT.model
+summary(agency.RT.model)
+
+#effects of
+# age
+# VoC
+# trial of condition
+
+#no interactions
+```
+
+
+```{r agency RTs model print model stats}
+
+agency.RT.lmer <- mixed(agencyLogRT ~ zAge * zAbsVoC * zTrialOfCond + (zAbsVoC * zTrialOfCond | subject_id),
+                         data = banditTask.RT.data,
+                         method = "S", 
+                         control=lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e6)),
+                         return = "merMod")
+
+tab_model(agency.RT.lmer, 
+          pred.labels = c("intercept", "age", "VoC magnitude", "trial", "age x VoC magnitude", "age x trial", "VoC magnitude x trial", "age x VoC magnitude x trial"),
+          transform = NULL,
+          show.est = T, 
+          show.se = T, 
+          show.fstat = T,
+          show.ci = F,
+          show.re.var = F,
+          show.icc = F,
+          show.ngroups = F,
+          show.obs = F,
+          show.r2 = F,
+          string.se = "SE",
+          emph.p = F,
+          string.pred = "Predictor",
+          title = "",
+          dv.labels = "")
+```
+
+## Plot: Agency RTs by VoC
+```{r agency RT by VoC, fig.height = 4, fig.width = 8, units = "in"}
+
+agencyRT.means.sub <- banditTask.RT.data %>%
+    group_by(voc, age_group, subject_id) %>%
+    summarize(meanSubRT = mean(agencyRT),
+              meanSubLogRT = mean(agencyLogRT))
+
+#compute means and SDs
+agencyRT.means <- agencyRT.means.sub  %>%
+    group_by(voc, age_group) %>%
+    summarize(meanRT = mean(meanSubRT),
+              meanLogRT = mean(meanSubLogRT),
+              seRT = sd(meanSubRT)/ sqrt(n()),
+              seLogRT = sd(meanSubLogRT)/ sqrt(n()))
+
+agencyRT.VoC.plot <- ggplot(agencyRT.means, 
+                            aes(x = voc, y = meanRT)) +
+    facet_wrap(~age_group) +
+    geom_point(size = 3, aes(color= age_group)) +
+    geom_errorbar(aes(ymin = meanRT - seRT, ymax = meanRT + seRT, color = age_group), width = .1, position = position_dodge(width = .9)) +
+    scale_color_manual(values = c(color1, color2, color3)) +
+    xlab("Value of Choice") +
+     ylab("Mean Agency Decision Time (s)") +
+    voc_theme() +
+    theme(legend.position = "none")
+agencyRT.VoC.plot
+```
 
 # Agency task: Machine selection
 ## Model: Optimal machine choices across trials by condition and age
@@ -235,7 +375,7 @@ machine_model_data$condition_trial <- scale_this(machine_model_data$condition_tr
 machine_model_data$age_z <- scale_this(machine_model_data$age)
 
 #run model
-machine_model <- mixed(stage_2_acc ~ age_z * context * condition_trial + (context * condition_trial || subject_id),
+machine_model <- mixed(stage_2_acc ~  context * condition_trial * age_z + (context * condition_trial || subject_id),
                       data = machine_model_data,
                       family = "binomial",
                       method = "LRT",
@@ -245,6 +385,36 @@ machine_model <- mixed(stage_2_acc ~ age_z * context * condition_trial + (contex
 #show model results
 machine_model
 summary(machine_model)
+```
+
+
+```{r machine model print model stats}
+
+machine_model.glmer <- mixed(stage_2_acc ~ context * condition_trial * age_z + (context * condition_trial || subject_id),
+                      data = machine_model_data,
+                      family = "binomial",
+                      method = "LRT",
+                      expand_re = T,
+                      control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e6)),
+                      return = "merMod")
+
+tab_model(machine_model.glmer, 
+          pred.labels = c("intercept", "condition", "trial", "age", "condition x trial", "condition x age", "trial x age", "condition x trial x age"),
+          transform = NULL,
+          show.est = T, 
+          show.se = T, 
+          show.stat = T,
+          show.ci = F,
+          show.re.var = F,
+          show.icc = F,
+          show.ngroups = F,
+          show.obs = F,
+          show.r2 = F,
+          string.se = "SE",
+          emph.p = F,
+          string.pred = "Predictor",
+          title = "",
+          dv.labels = "")
 ```
 
 ## Plot: Proportion optimal machine selections across age groups and trials
@@ -283,6 +453,7 @@ machine_selection_plot <- ggplot(machine_selection_means, aes(x=block, y=mean_ac
   theme(strip.text = element_text(size=12))
 machine_selection_plot
 ```
+
 
 
 

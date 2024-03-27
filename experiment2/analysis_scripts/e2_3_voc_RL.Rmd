@@ -1,6 +1,6 @@
 ---
 title: "E2 VoC Analyses Part 3: RL Analyses"
-date: 1/8/24
+date: 3/27/24
 output:
     html_document:
         df_print: 'paged'
@@ -30,6 +30,7 @@ library(tidyverse)
 library(glue)
 library(afex)
 library(latex2exp)
+library(sjPlot)
 
 #load scripts
 source('analysis_scripts/voc_functions.R')
@@ -183,41 +184,6 @@ summary(lm(agencyBonus ~ age, data = model_params))
 
 ```
 
-# Learning rate model
-```{r learning rate regression}
-## Learning rate model
-learning_rates <- model_params %>%
-  pivot_longer(cols = c(alphaPosChoice:alphaNegComp),
-               names_to = "learningRate",
-               values_to = "estimate") %>%
-  select(subject_id, age, learningRate, estimate) %>%
-  unique() %>%
-  mutate(valence = case_when(str_detect(learningRate, "Pos") ~ "Positive",
-                             str_detect(learningRate, "Neg") ~ "Negative"),
-         agency = case_when(str_detect(learningRate, "Choice") ~ "Choice",
-                            str_detect(learningRate, "Comp") ~ "Comp"))
-
-learning_rates$age_z <- scale_this(learning_rates$age)
-
-learning_rate_model <- mixed(estimate ~ age_z * valence * agency + (1|subject_id),
-                             data = learning_rates,
-                             method = "S")
-learning_rate_model
-summary(learning_rate_model)
-# main effect of age
-# main effect of valence
-# valence x agency interaction
-
-
-#t test between alpha pos choice and alpha neg choice
-t.test(model_params$alphaPosChoice, model_params$alphaNegChoice, paired = T)
-#significant
-
-#t test between alpha pos comp and alpha neg comp
-t.test(model_params$alphaPosComp, model_params$alphaNegComp, paired = T)
-#not significant
-
-```
 
 
 # Plot relations between model parameters and age
@@ -257,3 +223,225 @@ params_plot
 ```
 
 
+# Parameter summary statistics
+```{r parameter summary stats}
+
+param_summary <- params_long %>%
+    group_by(param) %>%
+    summarize(meanEstimate = mean(estimate),
+            seEstimate = sd(estimate)/sqrt(n()))
+param_summary
+
+```
+
+# Beta model
+```{r beta regression}
+betas <- model_params %>%
+    pivot_longer(cols = c(betaAgency, betaMachine),
+                 names_to = "betaType",
+                 values_to = "estimate") %>%
+    select(subject_id, age, betaType, estimate) %>%
+    unique() 
+                               
+betas$ageZ <- scale_this(betas$age)
+
+beta_model <- mixed(estimate ~ ageZ * betaType + (1|subject_id),
+                             data = betas,
+                             method = "S")
+beta_model
+summary(beta_model)
+
+```
+
+```{r  beta print model stats}
+
+beta_lmer <- mixed(estimate ~ ageZ * betaType + (1|subject_id),
+                   data = betas,
+                   method = "S",
+                   return = "merMod")
+
+tab_model(beta_lmer, 
+          pred.labels = c("intercept", "age", "decision stage", "age x decision stage"),
+          transform = NULL,
+          show.est = T, 
+          show.se = T, 
+          show.stat = T,
+          show.ci = F,
+          show.re.var = F,
+          show.icc = F,
+          show.ngroups = F,
+          show.obs = F,
+          show.r2 = F,
+          string.se = "SE",
+          emph.p = F,
+          string.pred = "Predictor",
+          title = "",
+          dv.labels = "")
+```
+
+# Learning rate model
+```{r learning rate regression}
+## Learning rate model
+learning_rates <- model_params %>%
+  pivot_longer(cols = c(alphaPosChoice:alphaNegComp),
+               names_to = "learningRate",
+               values_to = "estimate") %>%
+  select(subject_id, age, learningRate, estimate) %>%
+  unique() %>%
+  mutate(valence = case_when(str_detect(learningRate, "Pos") ~ "Positive",
+                             str_detect(learningRate, "Neg") ~ "Negative"),
+         agency = case_when(str_detect(learningRate, "Choice") ~ "Choice",
+                            str_detect(learningRate, "Comp") ~ "Comp"))
+
+learning_rates$age_z <- scale_this(learning_rates$age)
+
+learning_rate_model <- mixed(estimate ~ age_z * valence * agency + (1|subject_id),
+                             data = learning_rates,
+                             method = "S")
+learning_rate_model
+summary(learning_rate_model)
+# main effect of age
+# main effect of valence
+# valence x agency interaction
+
+
+#t test between alpha pos choice and alpha neg choice
+t.test(model_params$alphaPosChoice, model_params$alphaNegChoice, paired = T)
+#significant
+
+#t test between alpha pos comp and alpha neg comp
+t.test(model_params$alphaPosComp, model_params$alphaNegComp, paired = T)
+#not significant
+
+```
+
+
+```{r learning rate print model stats}
+
+learning_rate_lmer <- mixed(estimate ~ age_z * valence * agency + (1|subject_id),
+                             data = learning_rates,
+                             method = "S",
+                            return = "merMod")
+
+tab_model(learning_rate_lmer, 
+          pred.labels = c("intercept", "age", "valence", "agency", "age x valence", "age x agency", "valence x agency", "age x valence x agency"),
+          transform = NULL,
+          show.est = T, 
+          show.se = T, 
+          show.stat = T,
+          show.ci = F,
+          show.re.var = F,
+          show.icc = F,
+          show.ngroups = F,
+          show.obs = F,
+          show.r2 = F,
+          string.se = "SE",
+          emph.p = F,
+          string.pred = "Predictor",
+          title = "",
+          dv.labels = "")
+```
+
+## Learning rate plot
+```{r learning rate plot}
+
+learning_rate_means <- learning_rates %>%
+    group_by(agency, valence) %>%
+    summarize(meanLR = mean(estimate),
+              seLR = sd(estimate) / sqrt(n()))
+
+learning_rate_plot <- ggplot(learning_rate_means, aes(x = agency, y = meanLR, fill = valence)) +
+    geom_bar(color = 'black', stat = "identity", position = "dodge") + 
+    geom_errorbar(color = "black", aes(ymin = meanLR - seLR, ymax = meanLR + seLR), width = .1,
+                  position = position_dodge(width = .9)) +
+    scale_fill_manual(values = c(color1, color2), name = "Valence") +
+    ylab("Mean Learning Rate") +
+    xlab("Agency") +
+    scale_x_discrete(labels = c("Participant Choice", "Computer Choice")) +
+    voc_theme()
+learning_rate_plot 
+```
+
+
+
+# Relation between parameter estimates and 'model-free' regressions
+```{r does the voc by age interaction effect relate to betaAgency}
+
+# Read in data
+learning_data <- read_csv('data/processed/learning_data.csv') 
+
+#combine with participant age
+learning_data <- full_join(learning_data, participant_ages, by = c("subject_id"))
+
+#process 
+learning_data <- learning_data %>%
+  mutate(ev_choice = case_when(context == 0 ~ 9,
+                               context == 1 ~ 7,
+                               context == 2 ~ 5),
+         ev_comp = 5 + offer,
+         voc = ev_choice - ev_comp,
+         better_machine = case_when(reward_prob_L > reward_prob_R ~ 1,
+                                    reward_prob_L < reward_prob_R ~ 0,
+         ),
+         stage_2_acc = case_when(stage_2_choice == better_machine ~ 1,
+                                 stage_2_choice != better_machine ~ 0)) %>%
+  group_by(subject_id, context) %>%
+  mutate(condition_trial = rank(trial),
+         block = floor((trial-1)/21 + 1))
+
+# exclude first-stage misses and first-stage RT < 150 ms
+learning_data_filtered <- learning_data %>%
+  filter(stage_1_rt > 150)
+
+#get agency model data
+agency_model_data <- learning_data_filtered %>%
+  select(subject_id, stage_1_choice, voc, condition_trial, block, trial, age)
+
+## REGRESSION MODEL ##
+#z score continuous variables
+agency_model_data$subject_id <- factor(agency_model_data$subject_id)
+agency_model_data$voc_z <- scale_this(agency_model_data$voc)
+agency_model_data$condition_trial <- scale_this(agency_model_data$condition_trial)
+agency_model_data$age_z <- scale_this(agency_model_data$age)
+
+# predict agency choice from utility of control, trial, linear age
+agency_byVOCTrialAge.glmer = mixed(stage_1_choice ~ voc_z * condition_trial + (voc_z * condition_trial | subject_id), 
+                        data = agency_model_data, 
+                        family = binomial, 
+                        method = "LRT", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=1e6)),
+                        return = "merMod") 
+
+#get random effects
+voc_REs <- ranef(agency_byVOCTrialAge.glmer)$subject_id %>%
+    rownames_to_column(var = "subject_id")
+
+voc_REs$subject_id <- as.numeric(voc_REs$subject_id)
+
+#combine with RL estimates
+voc_REs_RL <- full_join(voc_REs, model_params, by = 'subject_id')
+
+```
+
+
+```{r run RE and parameter regressions}
+
+#run regressions
+
+#agency bonus
+voc_RE_agencyBonus.lm <- lm(`(Intercept)` ~ agencyBonus, data = voc_REs_RL)
+summary(voc_RE_agencyBonus.lm)
+
+#beta agency
+voc_RE_betaAgency.lm <- lm(voc_z ~ betaAgency, data = voc_REs_RL)
+summary(voc_RE_betaAgency.lm)
+
+#control for age
+voc_RE_betaAgencyAge.lm <- lm(voc_z ~ betaAgency + age, data = voc_REs_RL)
+summary(voc_RE_betaAgencyAge.lm)
+
+#control for beta machine
+voc_RE_betaMachine.lm <- lm(voc_z ~ betaAgency + betaMachine, data = voc_REs_RL)
+summary(voc_RE_betaMachine.lm)
+
+
+```

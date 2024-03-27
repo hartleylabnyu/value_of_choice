@@ -3,10 +3,10 @@ clear all;
 %% Load data %%
 
 %simulated data
-load('all_sim_data_spaced.mat');
+load('sim_data/all_sim_data_spaced.mat');
 
 %model fits
-load('all_model_fits_spaced.mat');
+load('sim_model_fits/all_model_fits_spaced.mat');
 
 %determine model num
 model_num = 16;
